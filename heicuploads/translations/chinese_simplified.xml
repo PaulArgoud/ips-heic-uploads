@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language>
+ <app key="heicuploads" version="10000">
+  <word key="__app_heicuploads" js="0">HEIC Uploads</word>
+  <word key="__app_heicuploads_description" js="0">将 iPhone 的 HEIC 和 HEIF 照片转换为 AVIF，使其在帖子中正常显示，而不是变成无法使用的下载链接。转换在后台进行，绝不会妨碍会员发帖。</word>
+  <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>
+  <word key="menu__heicuploads_heicuploads_settings" js="0">HEIC Uploads</word>
+  <word key="r__heicuploads_manage" js="0">可以管理 HEIC Uploads 设置吗？</word>
+  <word key="heicuploads_settings_title" js="0">HEIC Uploads</word>
+  <word key="heicuploads_status_ok" js="0">本服务器可以将 HEIC 转换为 AVIF。</word>
+  <word key="heicuploads_status_ko" js="0">本服务器无法进行转换。</word>
+  <word key="heicuploads_status_counts" js="0">已转换 %d 张，待处理 %d 张，失败 %d 张。</word>
+  <word key="heicuploads_status_failed_hint" js="0">失败详情见系统日志，类别“heicuploads”。</word>
+  <word key="heicuploads_enabled" js="0">转换 HEIC 上传</word>
+  <word key="heicuploads_enabled_desc" js="0">启用后，会员上传的 HEIC 和 HEIF 照片将被转换为 AVIF，以便浏览器能够显示。关闭此项可停止全部转换而无需卸载应用程序；已转换的照片不受影响。</word>
+  <word key="heicuploads_quality" js="0">AVIF 质量</word>
+  <word key="heicuploads_quality_desc" js="0">转换后全尺寸图像的质量。数值越低，文件越小，压缩痕迹越明显。65 是较好的平衡：一张 1200 万像素的 iPhone 照片约生成 90 KB。此设置独立于站点全局的“JPG 和 WebP 质量”设置，后者在此不适用。</word>
+  <word key="heicuploads_thumb_quality" js="0">缩略图质量</word>
+  <word key="heicuploads_thumb_quality_desc" js="0">帖子中显示的缩略图质量。缩略图同样为 AVIF 格式，并且直接从原始照片生成，而非从转换后的图像生成，因此不存在二次压缩。由于缩略图显示尺寸较小，较低的数值即可。</word>
+  <word key="heicuploads_filter" js="0">缩放滤镜</word>
+  <word key="heicuploads_filter_desc" js="0">照片缩小时使用的算法。推荐 Catrom：在本服务器上实测为 1.87 秒，而 Lanczos 为 2.37 秒，视觉效果相当。Triangle 略快但更柔和——其文件更小是因为损失了细节，而非压缩效率更高。</word>
+  <word key="heicuploads_speed" js="0">编码速度</word>
+  <word key="heicuploads_speed_desc" js="0">AVIF 编码器的运算强度，从 0（最慢）到 9（最快）。本服务器的实测表明，速度 9 生成的文件大小与速度 6 相同，但快七倍，因此很少有理由调低。仅在您于自己的硬件上实测出差异时才更改。</word>
+  <word key="heicuploads_threads" js="0">ImageMagick 线程数</word>
+  <word key="heicuploads_threads_desc" js="0">分配给每次转换的 CPU 线程数。超过 2 时，此处实测收益为零，而 CPU 开销翻倍，在多位会员同时上传时会拖累论坛的其余部分。请仅在有实测数据支持时调高。</word>
+  <word key="heicuploads_queue_progress" js="0">正在将 HEIC 照片转换为 AVIF</word>
+  <word key="scanHeic" js="0">查找待转换的 HEIC 附件</word>
+ </app>
+</language>

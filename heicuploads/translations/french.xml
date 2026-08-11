@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language>
+ <app key="heicuploads" version="10000">
+  <word key="__app_heicuploads" js="0">HEIC Uploads</word>
+  <word key="__app_heicuploads_description" js="0">Convertit les photos HEIC et HEIF des iPhone en AVIF pour qu'elles s'affichent normalement dans les messages, au lieu d'apparaître en liens de téléchargement inutilisables. La conversion se fait en arrière-plan et n'empêche jamais un membre de publier.</word>
+  <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>
+  <word key="menu__heicuploads_heicuploads_settings" js="0">HEIC Uploads</word>
+  <word key="r__heicuploads_manage" js="0">Peut gérer les réglages HEIC Uploads ?</word>
+  <word key="heicuploads_settings_title" js="0">HEIC Uploads</word>
+  <word key="heicuploads_status_ok" js="0">Ce serveur sait convertir le HEIC en AVIF.</word>
+  <word key="heicuploads_status_ko" js="0">La conversion est impossible sur ce serveur.</word>
+  <word key="heicuploads_status_counts" js="0">%d converties, %d en attente, %d en échec.</word>
+  <word key="heicuploads_status_failed_hint" js="0">Le détail des échecs est dans les journaux du système, catégorie « heicuploads ».</word>
+  <word key="heicuploads_enabled" js="0">Convertir les envois HEIC</word>
+  <word key="heicuploads_enabled_desc" js="0">Quand ce réglage est actif, les photos HEIC et HEIF envoyées par les membres sont converties en AVIF pour que les navigateurs sachent les afficher. Le désactiver arrête toute conversion sans désinstaller l'application ; les photos déjà converties ne sont pas touchées.</word>
+  <word key="heicuploads_quality" js="0">Qualité AVIF</word>
+  <word key="heicuploads_quality_desc" js="0">Qualité de l'image convertie en pleine taille. Plus la valeur est basse, plus le fichier est léger et plus les artefacts sont visibles. 65 est un bon équilibre : sur une photo d'iPhone de 12 Mpx, cela donne environ 90 Ko. Ce réglage est distinct de la « Qualité JPG et WebP » du forum, qui ne s'applique pas ici.</word>
+  <word key="heicuploads_thumb_quality" js="0">Qualité des vignettes</word>
+  <word key="heicuploads_thumb_quality_desc" js="0">Qualité de la vignette affichée dans les messages. Les vignettes sont elles aussi en AVIF, et elles sont produites à partir de la photo d'origine et non de l'image convertie : il n'y a donc pas de double compression. Une valeur basse convient, la vignette étant affichée en petit.</word>
+  <word key="heicuploads_filter" js="0">Filtre de redimensionnement</word>
+  <word key="heicuploads_filter_desc" js="0">Méthode de réduction de la photo. Catrom est recommandé : mesuré à 1,87 s sur ce serveur contre 2,37 s pour Lanczos, pour un rendu visuellement équivalent. Triangle est à peine plus rapide mais plus doux — ses fichiers plus légers viennent d'une perte de détail, pas d'une meilleure compression.</word>
+  <word key="heicuploads_speed" js="0">Vitesse d'encodage</word>
+  <word key="heicuploads_speed_desc" js="0">Effort de l'encodeur AVIF, de 0 (le plus lent) à 9 (le plus rapide). Les mesures sur ce serveur donnent à la vitesse 9 le même poids de fichier qu'à la vitesse 6, en sept fois moins de temps : il est donc rarement utile de la baisser. À ne modifier qu'après avoir mesuré une différence sur votre propre matériel.</word>
+  <word key="heicuploads_threads" js="0">Threads ImageMagick</word>
+  <word key="heicuploads_threads_desc" js="0">Nombre de threads processeur alloués à chaque conversion. Au-delà de 2, le gain mesuré ici est nul alors que le coût processeur double, ce qui pénalise le reste du forum quand plusieurs membres envoient des photos en même temps. À n'augmenter qu'avec des mesures à l'appui.</word>
+  <word key="heicuploads_queue_progress" js="0">Conversion des photos HEIC en AVIF</word>
+  <word key="scanHeic" js="0">Repérer les pièces jointes HEIC à convertir</word>
+ </app>
+</language>

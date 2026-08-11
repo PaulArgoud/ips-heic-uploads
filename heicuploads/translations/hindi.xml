@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language>
+ <app key="heicuploads" version="10000">
+  <word key="__app_heicuploads" js="0">HEIC Uploads</word>
+  <word key="__app_heicuploads_description" js="0">iPhone की HEIC और HEIF तस्वीरों को AVIF में बदलता है ताकि वे पोस्ट में सामान्य रूप से दिखें, न कि बेकार डाउनलोड लिंक के रूप में। रूपांतरण पृष्ठभूमि में चलता है और किसी सदस्य को पोस्ट करने से कभी नहीं रोकता।</word>
+  <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>
+  <word key="menu__heicuploads_heicuploads_settings" js="0">HEIC Uploads</word>
+  <word key="r__heicuploads_manage" js="0">क्या HEIC Uploads की सेटिंग्स प्रबंधित कर सकते हैं?</word>
+  <word key="heicuploads_settings_title" js="0">HEIC Uploads</word>
+  <word key="heicuploads_status_ok" js="0">यह सर्वर HEIC को AVIF में बदल सकता है।</word>
+  <word key="heicuploads_status_ko" js="0">इस सर्वर पर रूपांतरण संभव नहीं है।</word>
+  <word key="heicuploads_status_counts" js="0">%d बदली गईं, %d प्रतीक्षारत, %d विफल।</word>
+  <word key="heicuploads_status_failed_hint" js="0">विफलताओं का विवरण सिस्टम लॉग में है, श्रेणी “heicuploads”।</word>
+  <word key="heicuploads_enabled" js="0">HEIC अपलोड कन्वर्ट करें</word>
+  <word key="heicuploads_enabled_desc" js="0">सक्षम होने पर, सदस्यों द्वारा अपलोड की गई HEIC और HEIF तस्वीरें AVIF में बदल दी जाती हैं ताकि ब्राउज़र उन्हें दिखा सकें। एप्लिकेशन को अनइंस्टॉल किए बिना सारा रूपांतरण रोकने के लिए इसे बंद करें; पहले से बदली गई तस्वीरों पर कोई असर नहीं पड़ता।</word>
+  <word key="heicuploads_quality" js="0">AVIF गुणवत्ता</word>
+  <word key="heicuploads_quality_desc" js="0">बदली गई पूर्ण-आकार छवि की गुणवत्ता। मान जितना कम होगा, फ़ाइल उतनी छोटी और खामियाँ उतनी अधिक दिखाई देंगी। 65 एक अच्छा संतुलन है: 12 MP की iPhone तस्वीर पर यह लगभग 90 KB देता है। यह साइट-व्यापी “JPG and WebP quality” सेटिंग से अलग है, जो यहाँ लागू नहीं होती।</word>
+  <word key="heicuploads_thumb_quality" js="0">थंबनेल गुणवत्ता</word>
+  <word key="heicuploads_thumb_quality_desc" js="0">पोस्ट के भीतर दिखाए जाने वाले थंबनेल की गुणवत्ता। थंबनेल भी AVIF होते हैं और बदली गई छवि से नहीं, बल्कि मूल तस्वीर से बनाए जाते हैं, इसलिए दोहरा संपीड़न नहीं होता। थंबनेल छोटे आकार में दिखता है, इसलिए कम मान भी पर्याप्त है।</word>
+  <word key="heicuploads_filter" js="0">आकार बदलने का फ़िल्टर</word>
+  <word key="heicuploads_filter_desc" js="0">तस्वीर का आकार घटाने की विधि। Catrom अनुशंसित है: इस सर्वर पर यह 1.87 सेकंड मापा गया, जबकि Lanczos 2.37 सेकंड — देखने में परिणाम समान रहा। Triangle थोड़ा तेज़ है पर अधिक मुलायम — इसकी छोटी फ़ाइलें बेहतर संपीड़न का नहीं, बल्कि खोए हुए विवरण का परिणाम हैं।</word>
+  <word key="heicuploads_speed" js="0">एन्कोडिंग गति</word>
+  <word key="heicuploads_speed_desc" js="0">AVIF एन्कोडर का प्रयास, 0 (सबसे धीमा) से 9 (सबसे तेज़) तक। इस सर्वर पर मापने से पता चला कि गति 9 वही फ़ाइल आकार देती है जो गति 6 देती है, पर सात गुना तेज़ — इसलिए इसे घटाने का कारण कम ही होता है। इसे तभी बदलें जब आपने अपने हार्डवेयर पर अंतर मापा हो।</word>
+  <word key="heicuploads_threads" js="0">ImageMagick थ्रेड</word>
+  <word key="heicuploads_threads_desc" js="0">प्रत्येक रूपांतरण को दिए जाने वाले CPU थ्रेड। 2 से अधिक पर यहाँ मापा गया लाभ शून्य था जबकि CPU लागत दोगुनी हो गई, जो कई सदस्यों के एक साथ अपलोड करने पर बाकी फ़ोरम को धीमा कर देता है। इसे केवल मापों के आधार पर ही बढ़ाएँ।</word>
+  <word key="heicuploads_queue_progress" js="0">HEIC तस्वीरें AVIF में बदली जा रही हैं</word>
+  <word key="scanHeic" js="0">रूपांतरण की प्रतीक्षा कर रहे HEIC अटैचमेंट खोजें</word>
+ </app>
+</language>

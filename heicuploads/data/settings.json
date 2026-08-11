@@ -1,0 +1,37 @@
+[
+    {
+        "key": "heicuploads_enabled",
+        "default": "1",
+        "report": "full"
+    },
+    {
+        "key": "heicuploads_baseline_id",
+        "default": "0",
+        "report": "full"
+    },
+    {
+        "key": "heicuploads_quality",
+        "default": "65",
+        "report": "full"
+    },
+    {
+        "key": "heicuploads_filter",
+        "default": "catrom",
+        "report": "full"
+    },
+    {
+        "key": "heicuploads_speed",
+        "default": "9",
+        "report": "full"
+    },
+    {
+        "key": "heicuploads_threads",
+        "default": "2",
+        "report": "full"
+    },
+    {
+        "key": "heicuploads_thumb_quality",
+        "default": "25",
+        "report": "full"
+    }
+]

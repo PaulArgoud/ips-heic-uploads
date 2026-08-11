@@ -1,0 +1,7 @@
+{
+    "core": {
+        "Queue": {
+            "Convert": "IPS\\heicuploads\\extensions\\core\\Queue\\Convert"
+        }
+    }
+}

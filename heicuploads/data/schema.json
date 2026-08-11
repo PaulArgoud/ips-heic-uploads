@@ -1,0 +1,129 @@
+{
+    "heicuploads_map": {
+        "name": "heicuploads_map",
+        "columns": {
+            "id": {
+                "allow_null": false,
+                "auto_increment": true,
+                "comment": "",
+                "decimals": null,
+                "default": null,
+                "length": 20,
+                "name": "id",
+                "type": "BIGINT",
+                "unsigned": true,
+                "values": []
+            },
+            "attach_id": {
+                "allow_null": false,
+                "auto_increment": false,
+                "comment": "core_attachments.attach_id (INT signe, aligne sur le coeur)",
+                "decimals": null,
+                "default": "0",
+                "length": 10,
+                "name": "attach_id",
+                "type": "INT",
+                "unsigned": false,
+                "values": []
+            },
+            "status": {
+                "allow_null": false,
+                "auto_increment": false,
+                "comment": "pending, converted, failed",
+                "decimals": null,
+                "default": "pending",
+                "length": 0,
+                "name": "status",
+                "type": "ENUM",
+                "unsigned": false,
+                "values": [
+                    "pending",
+                    "converted",
+                    "failed"
+                ]
+            },
+            "attempts": {
+                "allow_null": false,
+                "auto_increment": false,
+                "comment": "",
+                "decimals": null,
+                "default": "0",
+                "length": 3,
+                "name": "attempts",
+                "type": "TINYINT",
+                "unsigned": true,
+                "values": []
+            },
+            "error_message": {
+                "allow_null": true,
+                "auto_increment": false,
+                "comment": "",
+                "decimals": null,
+                "default": null,
+                "length": 0,
+                "name": "error_message",
+                "type": "TEXT",
+                "unsigned": false,
+                "values": []
+            },
+            "created": {
+                "allow_null": false,
+                "auto_increment": false,
+                "comment": "",
+                "decimals": null,
+                "default": "0",
+                "length": 10,
+                "name": "created",
+                "type": "INT",
+                "unsigned": true,
+                "values": []
+            },
+            "updated": {
+                "allow_null": false,
+                "auto_increment": false,
+                "comment": "",
+                "decimals": null,
+                "default": "0",
+                "length": 10,
+                "name": "updated",
+                "type": "INT",
+                "unsigned": true,
+                "values": []
+            }
+        },
+        "indexes": {
+            "PRIMARY": {
+                "type": "primary",
+                "name": "PRIMARY",
+                "length": [
+                    null
+                ],
+                "columns": [
+                    "id"
+                ]
+            },
+            "attach_id": {
+                "type": "unique",
+                "name": "attach_id",
+                "length": [
+                    null
+                ],
+                "columns": [
+                    "attach_id"
+                ]
+            },
+            "status_created": {
+                "type": "key",
+                "name": "status_created",
+                "length": [
+                    null,
+                    null
+                ],
+                "columns": [
+                    "status",
+                    "created"
+                ]
+            }
+        }
+    }
+}

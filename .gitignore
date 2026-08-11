@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# Code source d'Invision Community — NE JAMAIS PUBLIER
+# ---------------------------------------------------------------------------
+# Copie de travail de la source IPS 5.0.19 (64 Mo, 8887 fichiers), conservée
+# localement parce que la documentation publique est celle de la v4 et n'est pas
+# fiable. C'est du code propriétaire sous licence commerciale : le pousser sur un
+# dépôt public serait une violation de licence.
+#
+# Le nom du répertoire est trompeur — il suggère 4.6.0 beta 3, c'est bien de la v5.
+ips_460b3/
+ips_*/
+
+# ---------------------------------------------------------------------------
+# Notes de travail internes
+# ---------------------------------------------------------------------------
+# Relevés de lecture du cœur d'IPS, avec extraits et numéros de ligne. Utiles au
+# développement, sans intérêt pour un utilisateur, et truffés de références à du
+# code propriétaire. Ce qui mérite d'être public est dans ARCHITECTURE.md.
+NOTES-API-IPS5.md
+NOTES-LACUNES.md
+
+# Document d'architecture interne : décisions, mesures et pièges vérifiés dans
+# le cœur d'Invision Community. Il cite le nom d'hôte des médias, les chemins du
+# serveur et l'alias SSH de production — un historique git public est définitif.
+ARCHITECTURE.md
+
+# ---------------------------------------------------------------------------
+# Sorties d'outillage et fichiers de test
+# ---------------------------------------------------------------------------
+# Manifeste d'empreintes, régénéré à chaque déploiement pour contrôler le
+# transfert vers le serveur. Aucun intérêt à le versionner.
+heicuploads-md5.txt
+
+# selftest.php écrit ses conversions à côté du fichier source.
+*.heic
+*.HEIC
+*.heif
+*.HEIF
+*.avif
+*.AVIF
+/tmp/
+*.log
+
+# ---------------------------------------------------------------------------
+# Système et éditeurs
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+
+.idea/
+.vscode/
+.fleet/
+*.sublime-workspace
+*.sublime-project
+nbproject/
+.phpstorm.meta.php
+_ide_helper.php
+
+*~
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+
+# ---------------------------------------------------------------------------
+# PHP
+# ---------------------------------------------------------------------------
+vendor/
+composer.lock
+.phpunit.result.cache
+.php-cs-fixer.cache
+.phpcs-cache

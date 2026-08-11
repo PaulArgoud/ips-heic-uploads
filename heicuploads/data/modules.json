@@ -1,0 +1,9 @@
+{
+    "admin": {
+        "heicuploads": {
+            "default_controller": "settings",
+            "protected": 0,
+            "default": 0
+        }
+    }
+}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language>
+ <app key="heicuploads" version="10000">
+  <word key="__app_heicuploads" js="0">HEIC Uploads</word>
+  <word key="__app_heicuploads_description" js="0">Convierte las fotos HEIC y HEIF de iPhone a AVIF para que se muestren con normalidad en los mensajes, en lugar de aparecer como enlaces de descarga inservibles. La conversión se ejecuta en segundo plano y nunca impide publicar a un miembro.</word>
+  <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>
+  <word key="menu__heicuploads_heicuploads_settings" js="0">HEIC Uploads</word>
+  <word key="r__heicuploads_manage" js="0">¿Puede gestionar los ajustes de HEIC Uploads?</word>
+  <word key="heicuploads_settings_title" js="0">HEIC Uploads</word>
+  <word key="heicuploads_status_ok" js="0">Este servidor puede convertir HEIC a AVIF.</word>
+  <word key="heicuploads_status_ko" js="0">La conversión no es posible en este servidor.</word>
+  <word key="heicuploads_status_counts" js="0">%d convertidas, %d pendientes, %d con error.</word>
+  <word key="heicuploads_status_failed_hint" js="0">El detalle de los errores está en los registros del sistema, categoría «heicuploads».</word>
+  <word key="heicuploads_enabled" js="0">Convertir las subidas HEIC</word>
+  <word key="heicuploads_enabled_desc" js="0">Cuando está activado, las fotos HEIC y HEIF subidas por los miembros se convierten a AVIF para que los navegadores puedan mostrarlas. Desactívelo para detener toda conversión sin desinstalar la aplicación; las fotos ya convertidas no se ven afectadas.</word>
+  <word key="heicuploads_quality" js="0">Calidad AVIF</word>
+  <word key="heicuploads_quality_desc" js="0">Calidad de la imagen convertida a tamaño completo. Un valor más bajo significa archivos más pequeños y artefactos más visibles. 65 es un buen equilibrio: en una foto de iPhone de 12 MP produce alrededor de 90 KB. Este ajuste es independiente del ajuste general del sitio «Calidad JPG y WebP», que no se aplica aquí.</word>
+  <word key="heicuploads_thumb_quality" js="0">Calidad de las miniaturas</word>
+  <word key="heicuploads_thumb_quality_desc" js="0">Calidad de la miniatura que se muestra dentro de los mensajes. Las miniaturas también son AVIF y se generan a partir de la foto original, no de la imagen convertida, por lo que no hay doble compresión. Un valor bajo es suficiente porque la miniatura se muestra en tamaño reducido.</word>
+  <word key="heicuploads_filter" js="0">Filtro de redimensionado</word>
+  <word key="heicuploads_filter_desc" js="0">Método de reducción de la foto. Se recomienda Catrom: en este servidor se midió en 1,87 s frente a 2,37 s de Lanczos, con un resultado visualmente equivalente. Triangle es algo más rápido pero más suave: sus archivos más pequeños se deben a la pérdida de detalle, no a una mejor compresión.</word>
+  <word key="heicuploads_speed" js="0">Velocidad de codificación</word>
+  <word key="heicuploads_speed_desc" js="0">Esfuerzo del codificador AVIF, de 0 (el más lento) a 9 (el más rápido). Las mediciones en este servidor mostraron que la velocidad 9 produce el mismo tamaño de archivo que la velocidad 6 siendo siete veces más rápida, por lo que rara vez hay motivo para reducirla. Cámbielo solo si ha medido una diferencia en su propio hardware.</word>
+  <word key="heicuploads_threads" js="0">Hilos de ImageMagick</word>
+  <word key="heicuploads_threads_desc" js="0">Hilos de CPU asignados a cada conversión. Por encima de 2, la ganancia medida aquí fue nula mientras que el coste de CPU se duplicó, lo que penaliza al resto del foro cuando varios miembros suben fotos a la vez. Auméntelo solo con mediciones que lo respalden.</word>
+  <word key="heicuploads_queue_progress" js="0">Convirtiendo fotos HEIC a AVIF</word>
+  <word key="scanHeic" js="0">Buscar archivos adjuntos HEIC pendientes de conversión</word>
+ </app>
+</language>
