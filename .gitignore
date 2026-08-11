@@ -19,11 +19,6 @@ ips_*/
 NOTES-API-IPS5.md
 NOTES-LACUNES.md
 
-# Document d'architecture interne : décisions, mesures et pièges vérifiés dans
-# le cœur d'Invision Community. Il cite le nom d'hôte des médias, les chemins du
-# serveur et l'alias SSH de production — un historique git public est définitif.
-ARCHITECTURE.md
-
 # ---------------------------------------------------------------------------
 # Sorties d'outillage et fichiers de test
 # ---------------------------------------------------------------------------

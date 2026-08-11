@@ -2,13 +2,13 @@
 
 **Les photos d'iPhone ne s'affichent pas sur votre forum ? Cette application les convertit.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0--beta.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
 [![Invision Community](https://img.shields.io/badge/Invision%20Community-5.0%2B-1D5AC1.svg)](https://invisioncommunity.com/)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![ImageMagick](https://img.shields.io/badge/ImageMagick-libheif%20%2B%20AVIF-C21325.svg)](https://imagemagick.org/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![Langues](https://img.shields.io/badge/langues-5-orange.svg)](#langues)
-[![Statut](https://img.shields.io/badge/statut-b%C3%AAta-yellow.svg)](#%C3%A9tat-du-projet)
+[![Statut](https://img.shields.io/badge/statut-stable-brightgreen.svg)](#%C3%A9tat-du-projet)
 [![PRs bienvenues](https://img.shields.io/badge/PRs-bienvenues-brightgreen.svg)](#contribuer)
 
 ---
@@ -189,10 +189,16 @@ php applications/heicuploads/tools/import-lang.php french 2 --ecrire
 
 ## État du projet
 
-**Bêta.** L'application tourne en production sur un forum réel, la chaîne
-complète est validée de l'envoi à l'affichage. Elle reste étiquetée bêta parce
-que certains chemins n'ont pas encore assez de vécu — notamment la réécriture
-des messages publiés en moins d'une minute.
+**Stable.** L'application tourne en production sur un forum réel depuis le
+10 août 2026 : **191 conversions, aucune en échec**, chaîne validée de l'envoi
+à l'affichage — y compris la réécriture des messages publiés avant la fin de la
+conversion.
+
+Une limite connue, à laquelle personne ne s'est encore heurté : si le processus
+de conversion est tué en cours de route (dépassement mémoire, par exemple), la
+tentative est comptabilisée mais l'échec n'est jamais consigné. La ligne reste
+« en attente », n'est plus rejouée une fois le plafond de tentatives atteint, et
+le bloc d'état continue de l'annoncer comme normale. Correction prévue.
 
 Voir le [CHANGELOG](CHANGELOG.md) pour l'historique, y compris les incidents et
 ce qu'ils ont appris.

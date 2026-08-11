@@ -5,7 +5,10 @@ Toutes les modifications notables de **HEIC Uploads**.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [1.0.0] — 2026-08-11
+
+Première version stable. L'application tourne en production depuis le
+10/08/2026 : 191 conversions, aucune en échec.
 
 ### Corrigé
 
@@ -31,7 +34,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 - **Scripts de `tools/` exécutables par HTTP anonyme** _(sérieux)_. Ils
   chargent `init.php` eux-mêmes et n'avaient pas la garde des autres fichiers ;
   ils divulguaient réglages, chemins de stockage obscurcis et journaux. Garde
-  `PHP_SAPI` ajoutée aux cinq.
+  `PHP_SAPI` ajoutée aux cinq scripts d'alors ; le sixième, `deploy-sync.php`,
+  la porte dès l'origine.
 
 ### Ajouté
 
@@ -53,10 +57,29 @@ et le projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
   installée, `data/lang.xml` n'étant lu qu'à l'installation.
 - `Rewriter::restoreEscapedTokens()` et `Rewriter::restoreDataFullImage()`,
   publiques pour être réutilisables par les outils de réparation.
+- Version longue `10001` dans `data/versions.json`. Sur une installation
+  existante, `deploy-sync.php --ecrire` aligne `core_applications` : il n'y a
+  pas de dossier `setup/`, le déploiement se fait par copie de fichiers puis
+  réconciliation.
 - `LICENSE` (MIT) et `.gitignore`, en préparation du dépôt public. Le
   `.gitignore` exclut d'abord la copie de travail du code source d'Invision
   Community : c'est du code propriétaire, le publier serait une violation de
   licence.
+
+### Limites connues
+
+- **Une conversion tuée en cours de route reste invisible.** La tentative est
+  comptabilisée avant le travail, délibérément, pour qu'un fichier qui fait
+  tomber le processus ne soit pas rejoué sans fin. Mais si le processus meurt
+  pendant la conversion — dépassement mémoire, par exemple — `markFailed()`
+  n'est jamais atteint : la ligne reste « en attente », cesse d'être rejouée une
+  fois le plafond de tentatives atteint, et n'est jamais comptée en échec. Le
+  bloc d'état de l'AdminCP l'annonce donc comme normale, et il n'existe aucun
+  moyen de la relancer sans SQL. Jamais observé en production à ce jour.
+- **`tools/repair-fullimage.php` recopie une cinquantaine de lignes du
+  `Rewriter`** — résolution du contenu depuis `core_attachments_map`, puis de la
+  colonne HTML — au lieu de les lui emprunter. Les deux copies ont déjà divergé
+  sur le rattrapage d'exceptions.
 
 ## [1.0.0-beta.1] — 2026-08-10
 
