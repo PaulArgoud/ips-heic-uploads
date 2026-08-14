@@ -5,7 +5,7 @@ Toutes les modifications notables de **HEIC Uploads**.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [1.0.2] — 2026-08-14
 
 ### Ajouté
 

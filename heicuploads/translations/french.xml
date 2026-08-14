@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language>
- <app key="heicuploads" version="10002">
+ <app key="heicuploads" version="10003">
   <word key="__app_heicuploads" js="0">HEIC Uploads</word>
   <word key="__app_heicuploads_description" js="0">Convertit les photos HEIC et HEIF des iPhone en AVIF pour qu'elles s'affichent normalement dans les messages, au lieu d'apparaître en liens de téléchargement inutilisables. La conversion se fait en arrière-plan et n'empêche jamais un membre de publier.</word>
   <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>

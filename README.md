@@ -2,7 +2,7 @@
 
 **iPhone photos won't display on your forum? This application converts them.**
 
-[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](CHANGELOG.md)
 [![Invision Community](https://img.shields.io/badge/Invision%20Community-5.0%2B-1D5AC1.svg)](https://invisioncommunity.com/)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![ImageMagick](https://img.shields.io/badge/ImageMagick-libheif%20%2B%20AVIF-C21325.svg)](https://imagemagick.org/)

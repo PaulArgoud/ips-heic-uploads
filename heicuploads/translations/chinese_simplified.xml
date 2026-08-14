@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language>
- <app key="heicuploads" version="10002">
+ <app key="heicuploads" version="10003">
   <word key="__app_heicuploads" js="0">HEIC Uploads</word>
   <word key="__app_heicuploads_description" js="0">将 iPhone 的 HEIC 和 HEIF 照片转换为 AVIF，使其在帖子中正常显示，而不是变成无法使用的下载链接。转换在后台进行，绝不会妨碍会员发帖。</word>
   <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>

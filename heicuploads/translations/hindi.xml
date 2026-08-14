@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language>
- <app key="heicuploads" version="10002">
+ <app key="heicuploads" version="10003">
   <word key="__app_heicuploads" js="0">HEIC Uploads</word>
   <word key="__app_heicuploads_description" js="0">iPhone की HEIC और HEIF तस्वीरों को AVIF में बदलता है ताकि वे पोस्ट में सामान्य रूप से दिखें, न कि बेकार डाउनलोड लिंक के रूप में। रूपांतरण पृष्ठभूमि में चलता है और किसी सदस्य को पोस्ट करने से कभी नहीं रोकता।</word>
   <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>
