@@ -11,12 +11,15 @@ use IPS\Db;
 use IPS\Extensions\QueueAbstract;
 use IPS\File;
 use IPS\heicuploads\Converter;
+use IPS\heicuploads\Map;
 use IPS\heicuploads\Rewriter;
 use IPS\Member;
 use IPS\Log;
 use IPS\Settings;
 use OutOfRangeException;
+use RuntimeException;
 use Throwable;
+use UnderflowException;
 use function defined;
 use const IPS\REBUILD_INTENSE;
 
@@ -42,15 +45,6 @@ class Convert extends QueueAbstract
 	public int $rebuild = REBUILD_INTENSE;
 
 	/**
-	 * @brief	Tentatives avant abandon définitif d'une conversion
-	 *
-	 * Constante et non réglage : personne n'a jamais eu besoin d'ajuster ça,
-	 * et un plafond est indispensable pour garantir que la file se termine
-	 * même si un fichier échoue systématiquement.
-	 */
-	protected const MAX_ATTEMPTS = 3;
-
-	/**
 	 * Préparer les données avant mise en file
 	 *
 	 * @param	array	$data	Données
@@ -61,7 +55,10 @@ class Convert extends QueueAbstract
 	{
 		try
 		{
-			$data['count'] = Db::i()->select( 'COUNT(*)', 'heicuploads_map', array( 'status=?', 'pending' ) )->first();
+			/* Les lignes réellement convertibles, plafond de tentatives
+			   compris : une ligne abandonnée ne doit pas faire créer un
+			   travail qui n'aurait rien à traiter. */
+			$data['count'] = Map::countConvertible();
 		}
 		catch( Exception )
 		{
@@ -99,43 +96,34 @@ class Convert extends QueueAbstract
 			throw new \IPS\Task\Queue\OutOfRangeException;
 		}
 
-		$maxAttempts = static::MAX_ATTEMPTS;
+		$row = Map::nextConvertible();
 
-		/* On ne sélectionne pas par offset : le statut des lignes change au
-		   fil de l'eau, une pagination serait incohérente. On prend la plus
-		   ancienne ligne encore convertible. Le plafond de tentatives garantit
-		   la terminaison même si un fichier échoue systématiquement. */
-		try
-		{
-			$row = Db::i()->select(
-				'*',
-				'heicuploads_map',
-				array( 'status=? AND attempts<?', 'pending', $maxAttempts ),
-				'created ASC',
-				array( 0, 1 )
-			)->first();
-		}
-		catch( Throwable $e )
+		if ( $row === NULL )
 		{
 			throw new \IPS\Task\Queue\OutOfRangeException;
 		}
 
-		/* Tentative comptabilisée AVANT le travail : si le processus est tué
-		   en cours de conversion (dépassement mémoire, par exemple), la ligne
-		   ne sera pas rejouée indéfiniment. */
-		Db::i()->update(
-			'heicuploads_map',
-			array( 'attempts' => $row['attempts'] + 1, 'updated' => time() ),
-			array( 'id=?', $row['id'] )
-		);
+		Map::beginAttempt( $row );
 
 		try
 		{
 			$this->convertRow( $row );
 		}
+		catch( UnderflowException $e )
+		{
+			/* La pièce jointe n'existe plus. Le membre l'a retirée de
+			   l'éditeur, ou le message a été supprimé avant que la file n'y
+			   arrive. Aucune reprise ne la fera réapparaître : la rejouer
+			   trois fois ne ferait que retarder le même constat, et
+			   l'UnderflowException de Select::first() a un message VIDE —
+			   la ligne finissait « en échec » sans rien dire. */
+			Map::abandon( $row, "La pièce jointe n'existe plus dans core_attachments : retirée par le membre, ou message supprimé." );
+
+			Log::log( "HEIC vers AVIF : pièce jointe {$row['attach_id']} disparue, ligne close sans nouvelle tentative", 'heicuploads' );
+		}
 		catch( Throwable $e )
 		{
-			$this->markFailed( $row, $e, $maxAttempts );
+			$this->markFailed( $row, $e );
 		}
 
 		return $offset + 1;
@@ -152,20 +140,94 @@ class Convert extends QueueAbstract
 	{
 		$attachment = Db::i()->select( '*', 'core_attachments', array( 'attach_id=?', $row['attach_id'] ) )->first();
 
+		/* Garde-fou : une pièce jointe qui n'est plus en HEIC ne doit JAMAIS
+		   repasser par ici. Le cas se produit dès qu'un blocage est relancé
+		   depuis l'AdminCP : si le processus avait été tué entre la mise à
+		   jour de core_attachments et le marquage de notre table, la ligne est
+		   restée « en attente » alors que la photo est déjà convertie.
+		   Reconvertir ne se contenterait pas de recompresser une deuxième
+		   fois : File::create() écrit un NOUVEAU nom et l'ancien est supprimé,
+		   alors que le HTML du message porte l'ancien chemin en dur — le
+		   membre verrait une image morte à la place de sa photo.
+		   La détection ne retient que les extensions de Converter, toute autre
+		   valeur signifie que la conversion a eu lieu. */
+		if ( !Converter::isSource( (string) $attachment['attach_file'] ) )
+		{
+			/* Régulariser ne suffit pas : si le processus est mort avant le
+			   marquage, il est mort AVANT la réécriture du message. Marquer
+			   « converted » sans la rejouer figerait un lien de téléchargement
+			   dans le message pour toujours — plus rien ne relit une ligne
+			   convertie. La réécriture est idempotente : elle ne trouve rien à
+			   faire si le message porte déjà l'image. */
+			$this->rewrite( $row );
+
+			Map::markConverted( $row );
+
+			Log::log(
+				"HEIC vers AVIF : pièce jointe {$row['attach_id']} déjà convertie (« {$attachment['attach_file']} »), ligne régularisée sans reconversion",
+				'heicuploads'
+			);
+
+			return;
+		}
+
 		$source = File::get( 'core_Attachment', $attachment['attach_location'] );
+
+		/* Le conteneur est capturé MAINTENANT : il sert aux dérivés, mais
+		   $source sera relâché bien avant, pour libérer la mémoire. Les
+		   dérivés vont dans le répertoire mensuel de la photo d'origine, pas
+		   dans le mois courant. */
+		$container = $source->container;
 
 		/* On passe par un fichier temporaire quel que soit le mode de
 		   stockage : c'est le seul chemin qui vaille aussi bien en local
 		   qu'en distant. Le coût est modeste, il s'agit du HEIC compressé
 		   (quelques mégaoctets) et non de l'image décompressée. */
-		$heicTmp = tempnam( \IPS\TEMP_DIRECTORY, 'heicuploads_src_' );
-		file_put_contents( $heicTmp, $source->contents() );
+		$contents = $source->contents();
 
+		$heicTmp  = tempnam( \IPS\TEMP_DIRECTORY, 'heicuploads_src_' );
 		$avifTmp  = tempnam( \IPS\TEMP_DIRECTORY, 'heicuploads_out_' );
 		$thumbTmp = tempnam( \IPS\TEMP_DIRECTORY, 'heicuploads_thb_' );
 
+		if ( $heicTmp === FALSE or $avifTmp === FALSE or $thumbTmp === FALSE )
+		{
+			throw new RuntimeException( 'Fichier temporaire impossible à créer dans ' . \IPS\TEMP_DIRECTORY );
+		}
+
+		$avif = $thumbFile = NULL;
+
 		try
 		{
+			/* Écriture vérifiée, parce que l'original sera DÉTRUIT au bout de
+			   cette méthode. Un disque plein ou un quota atteint fait écrire
+			   file_put_contents() partiellement et rendre le nombre d'octets
+			   écrits, sans exception : le gestionnaire d'erreurs d'IPS ignore
+			   E_WARNING (init.php:796-799), l'avertissement n'est donc ni
+			   converti ni journalisé. Sans ce contrôle, un HEIC tronqué
+			   pouvait être converti en une image tronquée, puis l'original
+			   supprimé. */
+			$written = file_put_contents( $heicTmp, $contents );
+
+			if ( $written === FALSE or $written !== strlen( $contents ) )
+			{
+				throw new RuntimeException( sprintf(
+					'Copie locale incomplète : %s octets écrits sur %d attendus.',
+					var_export( $written, TRUE ),
+					strlen( $contents )
+				) );
+			}
+
+			/* DEUX références désignent la même chaîne : la variable locale ET
+			   la propriété interne de l'objet \IPS\File, où contents() met le
+			   fichier en cache (system/File/FileSystem.php:270-290, propriété
+			   déclarée File.php:785). L'unset() de la seule variable locale ne
+			   libérait donc rien : le HEIC complet restait résident pendant
+			   tout le décodage et les deux File::create(), au moment précis où
+			   ImageMagick réclame le plus de mémoire. Il faut lâcher les deux.
+			   L'objet sera repris plus bas, au moment de la suppression. */
+			$contents = NULL;
+			$source   = NULL;
+
 			/* Un seul appel, un seul décodage du HEIC : l'AVIF et la vignette
 			   sortent des mêmes pixels. */
 			$result = static::converter()->process( $heicTmp, $avifTmp, $thumbTmp, ...static::thumbnailDimensions() );
@@ -177,8 +239,8 @@ class Convert extends QueueAbstract
 			   extension. \IPS\File y ajoutera son propre suffixe anti-collision. */
 			$base = pathinfo( $attachment['attach_file'], PATHINFO_FILENAME );
 
-			$avif = File::create( 'core_Attachment', $base . '.avif', NULL, $source->container, TRUE, $avifTmp, TRUE );
-			$thumbFile = File::create( 'core_Attachment', $base . '.thumb.' . $thumb['format'], NULL, $source->container, TRUE, $thumb['path'], TRUE );
+			$avif      = File::create( 'core_Attachment', $base . '.avif', NULL, $container, TRUE, $avifTmp, TRUE );
+			$thumbFile = File::create( 'core_Attachment', $base . '.thumb.' . $thumb['format'], NULL, $container, TRUE, $thumb['path'], TRUE );
 
 			/* Bascule de la pièce jointe sur l'AVIF. attach_is_image=1 est ce
 			   qui conditionne la reprise par le coeur dans les listes, les flux
@@ -202,28 +264,16 @@ class Convert extends QueueAbstract
 				'attach_filesize'      => $stats['filesize'],
 			), array( 'attach_id=?', $row['attach_id'] ) );
 
-			Db::i()->update( 'heicuploads_map', array(
-				'status'        => 'converted',
-				'error_message' => NULL,
-				'updated'       => time(),
-			), array( 'id=?', $row['id'] ) );
+			/* Passé cette mise à jour, les fichiers produits sont RÉFÉRENCÉS :
+			   les détruire au rattrapage casserait la pièce jointe. */
+			$avif = $thumbFile = NULL;
 
 			/* Voie de rattrapage. Si le membre a validé son message avant la
 			   fin de la conversion, le HTML publié porte un lien de
 			   téléchargement figé qu'aucune mise à jour de core_attachments
 			   ne corrigera. En marche normale la conversion s'est terminée
 			   pendant la rédaction, et rewrite() ne trouve rien à faire. */
-			try
-			{
-				Rewriter::rewrite( (int) $row['attach_id'] );
-			}
-			catch( Throwable $e )
-			{
-				/* Un échec de réécriture laisse un lien au lieu d'une image :
-				   c'est regrettable, jamais bloquant. La conversion, elle,
-				   est acquise. */
-				Log::log( "HEIC vers AVIF : réécriture du message échouée pour la pièce jointe {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
-			}
+			$this->rewrite( $row );
 
 			/* Le HEIC d'origine n'est supprimé qu'une fois l'AVIF écrit ET la
 			   base à jour : à aucun moment il n'existe de fenêtre où la photo
@@ -231,16 +281,50 @@ class Convert extends QueueAbstract
 			   choix assumé de ne pas conserver d'archive. */
 			try
 			{
-				$source->delete();
+				/* Repris ici, l'objet ayant été relâché plus haut pour libérer
+				   la copie en mémoire. $attachment a été lu AVANT la bascule et
+				   porte donc encore l'ancien emplacement, celui du HEIC : la
+				   mise à jour de core_attachments n'a pas touché ce tableau. */
+				File::get( 'core_Attachment', $attachment['attach_location'] )->delete();
 			}
 			catch( Exception $e )
 			{
 				Log::log( "HEIC vers AVIF : original non supprimé pour la pièce jointe {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
 			}
+
+			/* Marquage en DERNIER, délibérément : « converted » veut dire
+			   « convertie ET réécrite ET original supprimé ». Toute
+			   interruption avant ce point laisse la ligne « en attente » avec
+			   un nom de fichier qui n'est plus heic — état que le garde-fou du
+			   haut sait régulariser, réécriture comprise. L'inverse, marquer
+			   d'abord, produisait une ligne « convertie » dont le message
+			   pouvait n'avoir jamais été réécrit, et que plus rien ne
+			   reprenait. */
+			Map::markConverted( $row );
 		}
 		finally
 		{
-			foreach ( array( $heicTmp, $avifTmp, $thumbTmp, $thumbTmp . '.avif' ) as $tmp )
+			/* Les dérivés créés mais jamais référencés sont détruits : sans
+			   cela, chaque tentative en échec après File::create() laissait
+			   deux fichiers orphelins de plus dans le stockage — le nom porte
+			   un suffixe aléatoire de 32 caractères (File.php:1056), donc
+			   jamais réutilisé, et plus rien ne les désigne. */
+			foreach ( array( $avif, $thumbFile ) as $orphan )
+			{
+				if ( $orphan !== NULL )
+				{
+					try
+					{
+						$orphan->delete();
+					}
+					catch( Exception $e )
+					{
+						Log::log( "HEIC vers AVIF : dérivé orphelin non supprimé pour la pièce jointe {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
+					}
+				}
+			}
+
+			foreach ( array( $heicTmp, $avifTmp, $thumbTmp ) as $tmp )
 			{
 				if ( is_file( $tmp ) )
 				{
@@ -251,30 +335,46 @@ class Convert extends QueueAbstract
 	}
 
 	/**
-	 * Consigner un échec
+	 * Réécrire le HTML des messages qui portent cette pièce jointe.
 	 *
-	 * @param	array		$row			Ligne concernée
-	 * @param	Throwable	$e				Erreur rencontrée
-	 * @param	int			$maxAttempts	Plafond de tentatives
+	 * Isolé parce que DEUX chemins en ont besoin : la conversion normale, et
+	 * la régularisation d'une ligne dont la conversion s'était interrompue
+	 * après la mise à jour de core_attachments. Les avoir laissés diverger
+	 * aurait figé un lien de téléchargement dans le message du membre.
+	 *
+	 * @param	array	$row	Ligne de heicuploads_map
 	 * @return	void
 	 */
-	protected function markFailed( array $row, Throwable $e, int $maxAttempts ) : void
+	protected function rewrite( array $row ) : void
 	{
-		/* La ligne ne bascule en « failed » qu'une fois le plafond atteint :
-		   en deçà, elle reste « pending » et sera rejouée, ce qui absorbe les
-		   incidents passagers (verrou, mémoire momentanément saturée). */
-		$definitive = ( $row['attempts'] + 1 ) >= $maxAttempts;
+		try
+		{
+			Rewriter::rewrite( (int) $row['attach_id'] );
+		}
+		catch( Throwable $e )
+		{
+			/* Un échec de réécriture laisse un lien au lieu d'une image :
+			   c'est regrettable, jamais bloquant. La conversion, elle,
+			   est acquise. */
+			Log::log( "HEIC vers AVIF : réécriture du message échouée pour la pièce jointe {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
+		}
+	}
 
-		Db::i()->update( 'heicuploads_map', array(
-			'status'        => $definitive ? 'failed' : 'pending',
-			'error_message' => mb_substr( $e->getMessage(), 0, 1000 ),
-			'updated'       => time(),
-		), array( 'id=?', $row['id'] ) );
+	/**
+	 * Consigner un échec
+	 *
+	 * @param	array		$row	Ligne concernée
+	 * @param	Throwable	$e		Erreur rencontrée
+	 * @return	void
+	 */
+	protected function markFailed( array $row, Throwable $e ) : void
+	{
+		$definitive = Map::markFailed( $row, $e->getMessage() );
 
 		Log::log(
 			sprintf(
 				"HEIC vers AVIF : échec sur la pièce jointe %d (tentative %d/%d)%s — %s",
-				$row['attach_id'], $row['attempts'] + 1, $maxAttempts,
+				$row['attach_id'], $row['attempts'] + 1, Map::MAX_ATTEMPTS,
 				$definitive ? ', abandon' : '', $e->getMessage()
 			),
 			'heicuploads'
@@ -310,11 +410,17 @@ class Convert extends QueueAbstract
 			}
 		}
 
+		/* ?? et non ?: — le formulaire autorise 0 pour la qualité comme pour la
+		   vitesse, et « ?: » les traitait comme non renseignés : régler la
+		   vitesse à 0, la plus lente et la plus dense, appliquait 9. Un
+		   administrateur pouvait donc croire avoir choisi l'encodage le plus
+		   soigné tout en obtenant le plus rapide. Le repli ne doit couvrir que
+		   le réglage réellement absent — Settings rend NULL dans ce cas. */
 		return new Converter(
 			$maxWidth,
 			$maxHeight,
-			(int) ( Settings::i()->heicuploads_quality ?: 65 ),
-			(int) ( Settings::i()->heicuploads_speed ?: 9 ),
+			(int) ( Settings::i()->heicuploads_quality ?? 65 ),
+			(int) ( Settings::i()->heicuploads_speed ?? 9 ),
 			(int) ( Settings::i()->heicuploads_threads ?: 2 ),
 			(string) ( Settings::i()->heicuploads_filter ?: Converter::FILTER_DEFAULT )
 		);
@@ -335,7 +441,8 @@ class Convert extends QueueAbstract
 		return array(
 			(int) ( $dims[0] ?: 1000 ),
 			(int) ( $dims[1] ?? 750 ) ?: 750,
-			(int) ( Settings::i()->heicuploads_thumb_quality ?: 25 ),
+			/* ?? et non ?: : la qualité 0 est proposée par le formulaire. */
+			(int) ( Settings::i()->heicuploads_thumb_quality ?? 25 ),
 		);
 	}
 
@@ -348,11 +455,34 @@ class Convert extends QueueAbstract
 	 */
 	public function getProgress( array $data, int $offset ): array
 	{
+		/* Le total est recalculé À L'AFFICHAGE, et non repris du $data['count']
+		   figé à la mise en file. Deux raisons, toutes deux ordinaires :
+		   run() rend $offset + 1 sur TOUS les chemins, y compris après un échec
+		   rejoué — une même ligne avance donc l'offset de trois ; et
+		   scanHeic::queue() refuse de créer un second travail tant qu'une ligne
+		   core_queue existe, si bien que le travail en cours absorbe les photos
+		   détectées APRÈS sa création. Le rapport dépassait alors 100 % : un
+		   membre qui poste cinq photos à cheval sur deux passages de la
+		   détection suffisait. $data['count'] garde son rôle dans
+		   preQueueData() : décider s'il y a lieu de créer un travail. */
+		try
+		{
+			$remaining = Map::countConvertible();
+		}
+		catch( Exception )
+		{
+			/* Un compte indisponible ne doit pas faire tomber l'écran des
+			   processus de fond : on affiche « terminé » plutôt que rien. */
+			$remaining = 0;
+		}
+
+		$total = $offset + $remaining;
+
 		/* addToStack plutôt que Lang::load( defaultLanguage ) : le libellé suit
 		   la langue de l'administrateur qui regarde, pas celle du forum. */
 		return array(
 			'text'     => Member::loggedIn()->language()->addToStack( 'heicuploads_queue_progress' ),
-			'complete' => $data['count'] ? round( ( $offset / $data['count'] ) * 100, 2 ) : 100,
+			'complete' => $total ? round( ( $offset / $total ) * 100, 2 ) : 100,
 		);
 	}
 }

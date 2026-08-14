@@ -1,13 +1,4 @@
 <?php
-
-/* Ces scripts chargent init.php eux-memes : sans cette garde ils seraient
-   executables par une simple requete HTTP, et divulgueraient reglages,
-   chemins de stockage obscurcis et journaux. */
-if ( PHP_SAPI !== 'cli' )
-{
-	header( ( $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.0' ) . ' 403 Forbidden' );
-	exit;
-}
 /**
  * Réconcilie la base de données avec le manifeste de l'application.
  *
@@ -30,15 +21,7 @@ if ( PHP_SAPI !== 'cli' )
  *     php applications/heicuploads/tools/deploy-sync.php --ecrire (applique)
  */
 
-$root = realpath( __DIR__ . '/../../..' );
-
-if ( !is_file( $root . '/init.php' ) )
-{
-	fwrite( STDERR, "init.php introuvable. Lancez ce script depuis la racine du forum.\n" );
-	exit( 1 );
-}
-
-require_once $root . '/init.php';
+require_once __DIR__ . '/_bootstrap.php';
 
 use IPS\Application;
 use IPS\Data\Store;

@@ -1,13 +1,4 @@
 <?php
-
-/* Ces scripts chargent init.php eux-memes : sans cette garde ils seraient
-   executables par une simple requete HTTP, et divulgueraient reglages,
-   chemins de stockage obscurcis et journaux. */
-if ( PHP_SAPI !== 'cli' )
-{
-	header( ( $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.0' ) . ' 403 Forbidden' );
-	exit;
-}
 /**
  * Contrôle des conversions déjà effectuées.
  *
@@ -19,19 +10,12 @@ if ( PHP_SAPI !== 'cli' )
  * sont cohérents, et que la pièce jointe est bien passée en image.
  */
 
-$root = realpath( __DIR__ . '/../../..' );
-
-if ( !is_file( $root . '/init.php' ) )
-{
-	fwrite( STDERR, "init.php introuvable. Lancez ce script depuis la racine du forum.\n" );
-	exit( 1 );
-}
-
-require_once $root . '/init.php';
+require_once __DIR__ . '/_bootstrap.php';
 
 use IPS\Db;
 use IPS\File;
 use IPS\heicuploads\Converter;
+use IPS\heicuploads\Map;
 
 $limit = (int) ( $argv[1] ?? 10 );
 $ko    = fn( int $b ) => sprintf( '%d Ko', round( $b / 1024 ) );
@@ -40,7 +24,7 @@ printf( "=== %d dernières conversions ===\n\n", $limit );
 
 $problemes = 0;
 
-foreach ( Db::i()->select( '*', 'heicuploads_map', array( 'status=?', 'converted' ), 'updated DESC', array( 0, $limit ) ) as $row )
+foreach ( Map::converted( $limit, 'updated DESC' ) as $row )
 {
 	printf( "attach_id %d\n", $row['attach_id'] );
 

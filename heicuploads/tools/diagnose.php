@@ -1,13 +1,4 @@
 <?php
-
-/* Ces scripts chargent init.php eux-memes : sans cette garde ils seraient
-   executables par une simple requete HTTP, et divulgueraient reglages,
-   chemins de stockage obscurcis et journaux. */
-if ( PHP_SAPI !== 'cli' )
-{
-	header( ( $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.0' ) . ' 403 Forbidden' );
-	exit;
-}
 /**
  * Diagnostic de bout en bout.
  *
@@ -17,18 +8,12 @@ if ( PHP_SAPI !== 'cli' )
  *     php applications/heicuploads/tools/diagnose.php
  */
 
-$root = realpath( __DIR__ . '/../../..' );
-
-if ( !is_file( $root . '/init.php' ) )
-{
-	fwrite( STDERR, "init.php introuvable depuis {$root}. Lancez ce script depuis la racine du forum.\n" );
-	exit( 1 );
-}
-
-require_once $root . '/init.php';
+require_once __DIR__ . '/_bootstrap.php';
 
 use IPS\Db;
+use IPS\heicuploads\Application as HeicUploadsApplication;
 use IPS\heicuploads\Converter;
+use IPS\heicuploads\Map;
 use IPS\Settings;
 
 $ok   = fn( string $m ) => print( "  [OK]      {$m}\n" );
@@ -54,6 +39,15 @@ try
 		Settings::i()->heicuploads_filter,
 		Settings::i()->heicuploads_speed,
 		Settings::i()->heicuploads_threads ) );
+
+	/* Le repère de départ n'était affiché NULLE PART : ni ici, ni dans
+	   l'AdminCP. Or c'est lui qui décide de ce qui sera converti, et un repère
+	   absent suspend toute la détection en silence. */
+	$baseline = HeicUploadsApplication::baseline();
+
+	$baseline === NULL
+		? $ko( "Repère de départ NON POSÉ — la détection est suspendue, rien ne sera converti. Réinstallez l'application pour le poser." )
+		: $ok( "Repère de départ : attach_id {$baseline}. Rien d'antérieur ne sera converti." );
 }
 catch( Throwable $e )
 {
@@ -88,13 +82,13 @@ $titre( 3, "Y a-t-il des pièces jointes HEIC en base ?" );
 
 try
 {
-	$total = Db::i()->select( 'COUNT(*)', 'core_attachments', array( Db::i()->in( 'attach_ext', array( 'heic', 'heif' ) ) ) )->first();
+	$total = Db::i()->select( 'COUNT(*)', 'core_attachments', array( Db::i()->in( 'attach_ext', Converter::SOURCE_EXTENSIONS ) ) )->first();
 
 	if ( $total )
 	{
 		$ok( "{$total} pièce(s) jointe(s) avec attach_ext heic/heif." );
 
-		foreach ( Db::i()->select( '*', 'core_attachments', array( Db::i()->in( 'attach_ext', array( 'heic', 'heif' ) ) ), 'attach_id DESC', array( 0, 3 ) ) as $a )
+		foreach ( Db::i()->select( '*', 'core_attachments', array( Db::i()->in( 'attach_ext', Converter::SOURCE_EXTENSIONS ) ), 'attach_id DESC', array( 0, 3 ) ) as $a )
 		{
 			$info( sprintf( "id=%d ext=%s is_image=%d file=%s",
 				$a['attach_id'], $a['attach_ext'], $a['attach_is_image'], $a['attach_file'] ) );
@@ -151,16 +145,24 @@ $titre( 5, "La table de suivi et la file d'attente" );
 
 try
 {
-	$rows = iterator_to_array( Db::i()->select( 'status, COUNT(*) as total', 'heicuploads_map', NULL, NULL, NULL, 'status' ) );
+	$counts = Map::counts();
 
-	if ( $rows )
+	if ( array_sum( $counts ) )
 	{
-		foreach ( $rows as $r )
+		foreach ( $counts as $statut => $total )
 		{
-			$ok( "heicuploads_map : {$r['total']} en « {$r['status']} »" );
+			$ok( "heicuploads_map : {$total} en « {$statut} »" );
 		}
 
-		foreach ( Db::i()->select( '*', 'heicuploads_map', array( 'status=?', 'failed' ), 'updated DESC', array( 0, 3 ) ) as $f )
+		/* Les lignes bloquées ne se lisent pas dans le seul compteur d'échecs :
+		   une tentative interrompue reste « en attente » jusqu'à ce que la
+		   tâche la ferme. */
+		if ( $blocked = Map::countBlocked() )
+		{
+			$info( "{$blocked} ligne(s) bloquée(s), relançables depuis l'AdminCP." );
+		}
+
+		foreach ( Map::recentFailures() as $f )
 		{
 			$info( "échec attach_id={$f['attach_id']} après {$f['attempts']} tentative(s) : " . $f['error_message'] );
 		}

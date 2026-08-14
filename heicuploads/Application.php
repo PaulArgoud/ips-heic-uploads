@@ -99,6 +99,26 @@ class Application extends SystemApplication
 	 */
 	protected function setBaseline() : void
 	{
+		/* Un repère déjà posé ne se redéplace pas. La méthode est
+		   inconditionnelle par ailleurs, et rien n'interdit qu'installOther()
+		   soit rejoué — l'orchestrateur d'installation de l'AdminCP vit dans
+		   applications/core, hors de portée de vérification. Le rejouer
+		   remonterait le repère au plus grand attach_id du MOMENT, et les
+		   photos HEIC envoyées entre-temps mais pas encore détectées
+		   resteraient des liens de téléchargement, définitivement.
+		   Note : une resynchronisation par tools/deploy-sync.php ne présente
+		   pas ce risque — installSettings() ne réécrit que conf_default et
+		   conf_report, jamais conf_value (Application.php:2345-2353). */
+		if ( ( $existing = static::baseline() ) !== NULL )
+		{
+			Log::log(
+				"HEIC Uploads : repère de départ déjà posé à attach_id {$existing}, conservé tel quel.",
+				'heicuploads_install'
+			);
+
+			return;
+		}
+
 		try
 		{
 			$max = (int) ( Db::i()->select( 'MAX(attach_id)', 'core_attachments' )->first() ?: 0 );
@@ -116,6 +136,34 @@ class Application extends SystemApplication
 				"Impossible de déterminer le point de départ du balayage : " . $e->getMessage()
 			);
 		}
+	}
+
+	/**
+	 * Le repère de départ, ou NULL s'il n'a jamais été posé.
+	 *
+	 * La distinction est vitale. Le repère vaut « le plus grand attach_id qui
+	 * existait à l'installation » : tout ce qui lui est antérieur ne sera
+	 * JAMAIS converti, parce que la conversion détruit l'original.
+	 *
+	 * Or un repère jamais posé et un repère légitimement à 0 se ressemblaient :
+	 * le réglage naissait à « 0 » et la détection lisait « 0 ». Sur un forum
+	 * qui a dix ans d'archives, balayer à partir de 0 rejoue exactement
+	 * l'incident du 10/08/2026 — 185 pièces jointes anciennes converties,
+	 * originaux supprimés. La valeur par défaut est donc -1, « non posé », et
+	 * cette méthode est le SEUL endroit qui interprète le réglage.
+	 *
+	 * @return	int|null	NULL si le repère n'est pas posé
+	 */
+	public static function baseline() : ?int
+	{
+		$value = Settings::i()->heicuploads_baseline_id;
+
+		if ( $value === NULL or $value === '' or !is_numeric( $value ) or (int) $value < 0 )
+		{
+			return NULL;
+		}
+
+		return (int) $value;
 	}
 
 	/**

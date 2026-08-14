@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language>
- <app key="heicuploads" version="10000">
+ <app key="heicuploads" version="10002">
   <word key="__app_heicuploads" js="0">HEIC Uploads</word>
   <word key="__app_heicuploads_description" js="0">iPhone की HEIC और HEIF तस्वीरों को AVIF में बदलता है ताकि वे पोस्ट में सामान्य रूप से दिखें, न कि बेकार डाउनलोड लिंक के रूप में। रूपांतरण पृष्ठभूमि में चलता है और किसी सदस्य को पोस्ट करने से कभी नहीं रोकता।</word>
   <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>
@@ -11,6 +11,12 @@
   <word key="heicuploads_status_ko" js="0">इस सर्वर पर रूपांतरण संभव नहीं है।</word>
   <word key="heicuploads_status_counts" js="0">%d बदली गईं, %d प्रतीक्षारत, %d विफल।</word>
   <word key="heicuploads_status_failed_hint" js="0">विफलताओं का विवरण सिस्टम लॉग में है, श्रेणी “heicuploads”।</word>
+  <word key="heicuploads_retry_button" js="0">अटकी हुई रूपांतरण प्रक्रियाएँ फिर से चलाएँ</word>
+  <word key="heicuploads_retry_done" js="0">अटकी हुई रूपांतरण प्रक्रियाएँ फिर से कतार में डाल दी गई हैं।</word>
+  <word key="heicuploads_filter_catrom" js="0">Catrom — संतुलित (अनुशंसित)</word>
+  <word key="heicuploads_filter_lanczos" js="0">Lanczos — अधिक तीक्ष्ण, अधिक धीमा</word>
+  <word key="heicuploads_filter_triangle" js="0">Triangle — अधिक तेज़, अधिक कोमल</word>
+  <word key="heicuploads_status_no_baseline" js="0">प्रारंभिक बिंदु निर्धारित नहीं है, इसलिए पहचान रोक दी गई है: कोई नई तस्वीर नहीं बदली जाएगी। ऐसा तब होता है जब इंस्टॉलेशन अपने अंतिम चरण में बाधित हुआ हो। इसे निर्धारित करने के लिए एप्लिकेशन को «एप्लिकेशन» से पुनः इंस्टॉल करें।</word>
   <word key="heicuploads_enabled" js="0">HEIC अपलोड कन्वर्ट करें</word>
   <word key="heicuploads_enabled_desc" js="0">सक्षम होने पर, सदस्यों द्वारा अपलोड की गई HEIC और HEIF तस्वीरें AVIF में बदल दी जाती हैं ताकि ब्राउज़र उन्हें दिखा सकें। एप्लिकेशन को अनइंस्टॉल किए बिना सारा रूपांतरण रोकने के लिए इसे बंद करें; पहले से बदली गई तस्वीरों पर कोई असर नहीं पड़ता।</word>
   <word key="heicuploads_quality" js="0">AVIF गुणवत्ता</word>
@@ -24,6 +30,6 @@
   <word key="heicuploads_threads" js="0">ImageMagick थ्रेड</word>
   <word key="heicuploads_threads_desc" js="0">प्रत्येक रूपांतरण को दिए जाने वाले CPU थ्रेड। 2 से अधिक पर यहाँ मापा गया लाभ शून्य था जबकि CPU लागत दोगुनी हो गई, जो कई सदस्यों के एक साथ अपलोड करने पर बाकी फ़ोरम को धीमा कर देता है। इसे केवल मापों के आधार पर ही बढ़ाएँ।</word>
   <word key="heicuploads_queue_progress" js="0">HEIC तस्वीरें AVIF में बदली जा रही हैं</word>
-  <word key="scanHeic" js="0">रूपांतरण की प्रतीक्षा कर रहे HEIC अटैचमेंट खोजें</word>
+  <word key="task__scanHeic" js="0">रूपांतरण की प्रतीक्षा कर रहे HEIC अटैचमेंट खोजें</word>
  </app>
 </language>

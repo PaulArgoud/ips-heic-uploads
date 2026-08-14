@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language>
- <app key="heicuploads" version="10000">
+ <app key="heicuploads" version="10002">
   <word key="__app_heicuploads" js="0">HEIC Uploads</word>
   <word key="__app_heicuploads_description" js="0">Convierte las fotos HEIC y HEIF de iPhone a AVIF para que se muestren con normalidad en los mensajes, en lugar de aparecer como enlaces de descarga inservibles. La conversión se ejecuta en segundo plano y nunca impide publicar a un miembro.</word>
   <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>
@@ -11,6 +11,12 @@
   <word key="heicuploads_status_ko" js="0">La conversión no es posible en este servidor.</word>
   <word key="heicuploads_status_counts" js="0">%d convertidas, %d pendientes, %d con error.</word>
   <word key="heicuploads_status_failed_hint" js="0">El detalle de los errores está en los registros del sistema, categoría «heicuploads».</word>
+  <word key="heicuploads_retry_button" js="0">Reintentar las conversiones bloqueadas</word>
+  <word key="heicuploads_retry_done" js="0">Las conversiones bloqueadas se han vuelto a poner en cola.</word>
+  <word key="heicuploads_filter_catrom" js="0">Catrom — equilibrado (recomendado)</word>
+  <word key="heicuploads_filter_lanczos" js="0">Lanczos — más nítido, más lento</word>
+  <word key="heicuploads_filter_triangle" js="0">Triangle — más rápido, más suave</word>
+  <word key="heicuploads_status_no_baseline" js="0">El punto de partida no está fijado: la detección está suspendida y no se convertirá ninguna foto nueva. Ocurre cuando la instalación se interrumpió en su último paso. Reinstale la aplicación desde Aplicaciones para fijarlo.</word>
   <word key="heicuploads_enabled" js="0">Convertir las subidas HEIC</word>
   <word key="heicuploads_enabled_desc" js="0">Cuando está activado, las fotos HEIC y HEIF subidas por los miembros se convierten a AVIF para que los navegadores puedan mostrarlas. Desactívelo para detener toda conversión sin desinstalar la aplicación; las fotos ya convertidas no se ven afectadas.</word>
   <word key="heicuploads_quality" js="0">Calidad AVIF</word>
@@ -24,6 +30,6 @@
   <word key="heicuploads_threads" js="0">Hilos de ImageMagick</word>
   <word key="heicuploads_threads_desc" js="0">Hilos de CPU asignados a cada conversión. Por encima de 2, la ganancia medida aquí fue nula mientras que el coste de CPU se duplicó, lo que penaliza al resto del foro cuando varios miembros suben fotos a la vez. Auméntelo solo con mediciones que lo respalden.</word>
   <word key="heicuploads_queue_progress" js="0">Convirtiendo fotos HEIC a AVIF</word>
-  <word key="scanHeic" js="0">Buscar archivos adjuntos HEIC pendientes de conversión</word>
+  <word key="task__scanHeic" js="0">Buscar archivos adjuntos HEIC pendientes de conversión</word>
  </app>
 </language>

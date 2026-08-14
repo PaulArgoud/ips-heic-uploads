@@ -6,19 +6,24 @@
 
 namespace IPS\heicuploads\modules\admin\heicuploads;
 
-use IPS\Db;
 use IPS\Dispatcher;
 use IPS\Dispatcher\Controller;
+use IPS\heicuploads\Application as HeicUploadsApplication;
 use IPS\heicuploads\Converter;
+use IPS\heicuploads\Map;
 use IPS\Helpers\Form;
 use IPS\Helpers\Form\Number;
 use IPS\Helpers\Form\Select;
 use IPS\Helpers\Form\YesNo;
+use IPS\Log;
 use IPS\Member;
 use IPS\Output;
+use IPS\Session;
 use IPS\Settings as SettingsClass;
+use IPS\Task;
 use Throwable;
 use function defined;
+use function htmlspecialchars;
 
 if ( !defined( '\IPS\SUITE_UNIQUE_KEY' ) )
 {
@@ -33,8 +38,39 @@ class settings extends Controller
 {
 	/**
 	 * @brief	Protection CSRF
+	 *
+	 * ATTENTION — ce drapeau ne PROTÈGE rien : il DÉSACTIVE le seul contrôle
+	 * automatique de l'AdminCP. Le dispatcher teste sa seule présence, jamais
+	 * sa valeur (`!isset( $this->classname::$csrfProtected )`,
+	 * system/Dispatcher/Admin.php:227) : le déclarer à FALSE désactiverait le
+	 * contrôle tout autant. C'est une promesse du développeur — « nous avons
+	 * ajouté nous-mêmes les contrôles CSRF » — et elle vaut pour TOUTES les
+	 * actions du contrôleur.
+	 *
+	 * Ici, `manage()` la tient par son formulaire : Form::values() refuse de
+	 * rendre des valeurs si le jeton ne correspond pas (Form.php:185 et 689).
+	 * Toute action `do=` ajoutée doit appeler `Session::i()->csrfCheck()`
+	 * elle-même, en première ligne.
 	 */
 	public static bool $csrfProtected = TRUE;
+
+	/**
+	 * Point d'entrée du contrôleur.
+	 *
+	 * La permission est contrôlée ici plutôt que dans chaque action : c'est
+	 * l'idiome du coeur (applications/forums/modules/admin/stats/solved.php:67-71),
+	 * et il garantit qu'une action ajoutée plus tard est couverte même si on
+	 * oublie de le faire. `Controller::execute()` route ensuite `do=` vers la
+	 * méthode du même nom (system/Dispatcher/Controller.php:123-130).
+	 *
+	 * @return	void
+	 */
+	public function execute() : void
+	{
+		Dispatcher::i()->checkAcpPermission( 'heicuploads_manage' );
+
+		parent::execute();
+	}
 
 	/**
 	 * Écran principal
@@ -43,8 +79,6 @@ class settings extends Controller
 	 */
 	protected function manage() : void
 	{
-		Dispatcher::i()->checkAcpPermission( 'heicuploads_manage' );
-
 		$form = new Form;
 
 		$form->add( new YesNo(
@@ -71,17 +105,21 @@ class settings extends Controller
 
 		/* Trois filtres seulement : ceux que nous avons mesurés sur ce
 		   serveur. Les libellés portent le compromis, pour que le choix se
-		   fasse en connaissance de cause plutôt qu'au nom du filtre. */
+		   fasse en connaissance de cause plutôt qu'au nom du filtre.
+		   Ce sont des CLÉS de langue : « parse » vaut « lang » par défaut
+		   (system/Helpers/Form/Select.php:44 et 63). La version précédente
+		   forçait « normal » et écrivait les libellés en français dans le
+		   code — un administrateur anglophone lisait donc du français au
+		   milieu d'un écran par ailleurs traduit. */
 		$form->add( new Select(
 			'heicuploads_filter',
 			SettingsClass::i()->heicuploads_filter ?: Converter::FILTER_DEFAULT,
 			TRUE,
 			array(
-				'parse'   => 'normal',
 				'options' => array(
-					'catrom'   => 'Catrom — équilibré (recommandé)',
-					'lanczos'  => 'Lanczos — plus piqué, plus lent',
-					'triangle' => 'Triangle — plus rapide, plus doux',
+					'catrom'   => 'heicuploads_filter_catrom',
+					'lanczos'  => 'heicuploads_filter_lanczos',
+					'triangle' => 'heicuploads_filter_triangle',
 				),
 			)
 		) );
@@ -109,7 +147,16 @@ class settings extends Controller
 		if ( $values = $form->values() )
 		{
 			$form->saveAsSettings( $values );
-			Output::i()->redirect( Dispatcher::i()->url, 'saved' );
+
+			/* $this->url, PAS Dispatcher::i()->url : cette propriété n'existe
+			   pas. Ni \IPS\Dispatcher, ni \IPS\Dispatcher\Standard, ni
+			   \IPS\Dispatcher\Admin ne déclarent $url, et aucune n'a de __get.
+			   La lecture donnait NULL, et redirect() attend un
+			   « Url|string » non nullable (system/Output/Output.php:1448) :
+			   les réglages étaient enregistrés, puis la page tombait en
+			   TypeError. C'est \IPS\Dispatcher\Controller qui porte $url,
+			   posée au constructeur (Controller.php:47 et 69-81). */
+			Output::i()->redirect( $this->url, 'saved' );
 		}
 
 		/* addToStack et non la clé brute : Output::i()->title attend une chaîne
@@ -118,6 +165,45 @@ class settings extends Controller
 		   clé affichait « heicuploads_settings_title » à l'écran. */
 		Output::i()->title  = Member::loggedIn()->language()->addToStack( 'heicuploads_settings_title' );
 		Output::i()->output = $this->status() . $form;
+	}
+
+	/**
+	 * Relancer les conversions bloquées.
+	 *
+	 * Sans cette action, une conversion en échec ne repartait QUE par une
+	 * requête SQL à la main : le plafond de tentatives est atteint, le
+	 * sélecteur de la file ignore la ligne, et plus rien ne la reprend jamais.
+	 *
+	 * Deux états sont repris, parce que l'administrateur ne fait pas la
+	 * différence entre les deux et n'a pas à la faire : les lignes « en
+	 * échec », et celles restées « en attente » avec leur plafond épuisé —
+	 * une conversion tuée en cours de route, que la tâche de détection n'a pas
+	 * encore fermée.
+	 *
+	 * @return	void
+	 */
+	protected function relancer() : void
+	{
+		/* Le contrôle CSRF n'est PAS automatique ici : voir $csrfProtected.
+		   Première ligne, comme le fait le coeur dans ses actions « do= »
+		   (applications/forums/modules/admin/stats/solved.php:252-254). */
+		Session::i()->csrfCheck();
+
+		try
+		{
+			Map::retryBlocked();
+
+			/* Le marqueur voyage dans les DONNÉES du travail : la
+			   déduplication de Task::queue() compare les clés de $data, pas
+			   une étiquette à part (system/Task/Task.php:210-231). */
+			Task::queue( 'heicuploads', 'Convert', array( 'job' => 'convert' ), 3, array( 'job' ) );
+		}
+		catch( Throwable $e )
+		{
+			Log::log( "HEIC vers AVIF : relance des conversions impossible — " . $e->getMessage(), 'heicuploads' );
+		}
+
+		Output::i()->redirect( $this->url, 'heicuploads_retry_done' );
 	}
 
 	/**
@@ -133,6 +219,20 @@ class settings extends Controller
 	protected function status() : string
 	{
 		$html = '';
+
+		/* --- Le repère de départ est-il posé ? --- */
+
+		/* En tête, parce que c'est la panne la plus silencieuse : sans repère,
+		   la détection se suspend d'elle-même et plus rien ne se convertit,
+		   sans qu'aucune erreur n'apparaisse nulle part. Le cas se produit
+		   quand une installation s'est interrompue à sa dernière étape — un
+		   serveur sans libheif, par exemple. */
+		if ( HeicUploadsApplication::baseline() === NULL )
+		{
+			$html .= "<div class='ipsMessage ipsMessage--error'>"
+				. Member::loggedIn()->language()->addToStack( 'heicuploads_status_no_baseline' )
+				. "</div>";
+		}
 
 		/* --- Le serveur peut-il convertir ? --- */
 
@@ -185,22 +285,31 @@ class settings extends Controller
 
 		try
 		{
-			$counts = array( 'pending' => 0, 'converted' => 0, 'failed' => 0 );
-
-			foreach ( Db::i()->select( 'status, COUNT(*) as total', 'heicuploads_map', NULL, NULL, NULL, 'status' ) as $row )
-			{
-				$counts[ $row['status'] ] = (int) $row['total'];
-			}
+			$counts = Map::counts();
 
 			$html .= "<div class='ipsMessage ipsMessage--info'>"
-				. Member::loggedIn()->language()->addToStack( 'heicuploads_status_counts', FALSE, array( 'sprintf' => array( $counts['converted'], $counts['pending'], $counts['failed'] ) ) )
+				. Member::loggedIn()->language()->addToStack( 'heicuploads_status_counts', FALSE, array( 'sprintf' => array( $counts[ Map::CONVERTED ], $counts[ Map::PENDING ], $counts[ Map::FAILED ] ) ) )
 				. "</div>";
 
-			if ( $counts['failed'] )
+			/* Échecs définitifs ET tentatives interrompues : l'administrateur
+			   ne fait pas la différence et n'a pas à la faire. La tâche de
+			   détection ferme les secondes dans la minute, mais le bouton ne
+			   doit pas disparaître dans cet intervalle. */
+			if ( Map::countBlocked() )
 			{
+				/* csrf() ajoute csrfKey à l'URL (system/Http/Url/Internal.php:270-273) :
+				   sans lui, relancer() refuserait l'action. */
+				$link = htmlspecialchars(
+					(string) $this->url->setQueryString( 'do', 'relancer' )->csrf(),
+					ENT_QUOTES,
+					'UTF-8'
+				);
+
 				$html .= "<div class='ipsMessage ipsMessage--warning'>"
 					. Member::loggedIn()->language()->addToStack( 'heicuploads_status_failed_hint' )
-					. "</div>";
+					. "<br><br><a href='{$link}' class='ipsButton ipsButton--primary ipsButton--small'>"
+					. Member::loggedIn()->language()->addToStack( 'heicuploads_retry_button' )
+					. "</a></div>";
 			}
 		}
 		catch( Throwable $e )

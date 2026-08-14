@@ -1,13 +1,4 @@
 <?php
-
-/* Ces scripts chargent init.php eux-memes : sans cette garde ils seraient
-   executables par une simple requete HTTP, et divulgueraient reglages,
-   chemins de stockage obscurcis et journaux. */
-if ( PHP_SAPI !== 'cli' )
-{
-	header( ( $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.0' ) . ' 403 Forbidden' );
-	exit;
-}
 /**
  * Répare les messages déjà réécrits par une version antérieure.
  *
@@ -20,19 +11,10 @@ if ( PHP_SAPI !== 'cli' )
  *     php applications/heicuploads/tools/repair-fullimage.php --ecrire (applique)
  */
 
-$root = realpath( __DIR__ . '/../../..' );
+require_once __DIR__ . '/_bootstrap.php';
 
-if ( !is_file( $root . '/init.php' ) )
-{
-	fwrite( STDERR, "init.php introuvable. Lancez ce script depuis la racine du forum.\n" );
-	exit( 1 );
-}
-
-require_once $root . '/init.php';
-
-use IPS\Application;
-use IPS\Content;
 use IPS\Db;
+use IPS\heicuploads\Map;
 use IPS\heicuploads\Rewriter;
 
 $ecrire = in_array( '--ecrire', $argv );
@@ -43,71 +25,40 @@ $vus = $corriges = 0;
 
 /* On repart des conversions connues : chacune a pu donner lieu à une
    réécriture, et donc à un data-full-image mal formé. */
-foreach ( Db::i()->select( 'attach_id', 'heicuploads_map', array( 'status=?', 'converted' ), 'attach_id ASC' ) as $attachId )
+foreach ( Map::converted() as $conversion )
 {
+	$attachId = (int) $conversion['attach_id'];
+
 	foreach ( Db::i()->select( '*', 'core_attachments_map', array( 'attachment_id=?', $attachId ) ) as $map )
 	{
-		$exploded = explode( '_', $map['location_key'] );
-
-		if ( count( $exploded ) < 2 )
-		{
-			continue;
-		}
-
 		try
 		{
-			$extensions = Application::load( $exploded[0] )->extensions( 'core', 'EditorLocations' );
+			/* La résolution du contenu et la localisation de sa colonne HTML
+			   sont empruntées au Rewriter, jamais recopiées : ce script en
+			   avait sa propre version, et les deux avaient déjà divergé. Le
+			   dernier argument fait la simulation — rien n'est écrit tant que
+			   --ecrire n'est pas passé. */
+			$resultat = Rewriter::transform(
+				$map,
+				static fn( string $html ) : ?string => Rewriter::restoreDataFullImage( Rewriter::restoreEscapedTokens( $html ) ),
+				$ecrire
+			);
 
-			if ( !isset( $extensions[ $exploded[1] ] ) )
+			/* Contenu supprimé, application désinstallée, ou emplacement qui
+			   n'est pas du contenu (avatar, champ de profil) : rien à faire. */
+			if ( $resultat === NULL )
 			{
 				continue;
 			}
-
-			$object = $extensions[ $exploded[1] ]->attachmentLookup( $map['id1'], $map['id2'], $map['id3'] );
-
-			if ( !( $object instanceof Content ) )
-			{
-				continue;
-			}
-
-			$class  = $object::class;
-			$column = $class::$databaseColumnMap['content'] ?? NULL;
-
-			if ( $column === NULL )
-			{
-				continue;
-			}
-
-			if ( is_array( $column ) )
-			{
-				$column = reset( $column );
-			}
-
-			$table    = $class::$databaseTable;
-			$prefix   = $class::$databasePrefix;
-			$idColumn = $class::$databaseColumnId;
-
-			$row      = Db::i()->select( '*', $table, array( $prefix . $idColumn . '=?', $object->$idColumn ) )->first();
-			$original = $row[ $prefix . $column ];
-			$corrige  = Rewriter::restoreDataFullImage( Rewriter::restoreEscapedTokens( $original ) );
 
 			$vus++;
 
-			if ( $corrige === $original )
+			if ( !$resultat['changed'] )
 			{
 				continue;
 			}
 
-			printf( "  %s #%s (pièce jointe %d)\n", $table, $object->$idColumn, $attachId );
-
-			if ( $ecrire )
-			{
-				Db::i()->update(
-					$table,
-					array( $prefix . $column => $corrige ),
-					array( $prefix . $idColumn . '=?', $object->$idColumn )
-				);
-			}
+			printf( "  %s #%s (pièce jointe %d)\n", $resultat['table'], $resultat['id'], $attachId );
 
 			$corriges++;
 		}

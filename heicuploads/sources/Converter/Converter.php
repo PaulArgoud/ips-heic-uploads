@@ -43,6 +43,34 @@ class Converter
 	public const SOURCE_EXTENSIONS = array( 'heic', 'heif' );
 
 	/**
+	 * Marques ISOBMFF acceptées comme HEIF.
+	 *
+	 * Ce sont les valeurs légitimes de la marque majeure d'une boîte « ftyp »
+	 * pour un fichier HEIF. « mif1 » et « msf1 » y figurent : ce sont les
+	 * marques génériques du conteneur, qu'emploient certains encodeurs.
+	 */
+	public const HEIF_BRANDS = array(
+		'heic', 'heix', 'heim', 'heis', 'hevc', 'hevx', 'hevm', 'hevs', 'mif1', 'msf1',
+	);
+
+	/**
+	 * Codeurs ImageMagick autorisés, par signature reconnue.
+	 *
+	 * La liste est délibérément courte : ce sont les formats que le coeur
+	 * lui-même sait identifier (\IPS\Image::create, Image.php:76-127). Tout
+	 * le reste — PDF, SVG, MSL, MVG, et les quelque deux cents formats
+	 * qu'ImageMagick accepte — est refusé.
+	 */
+	public const CODERS = array(
+		'jpeg' => 'jpeg:',
+		'png'  => 'png:',
+		'gif'  => 'gif:',
+		'webp' => 'webp:',
+		'avif' => 'avif:',
+		'heif' => 'heic:',
+	);
+
+	/**
 	 * Filtres de redimensionnement proposés.
 	 *
 	 * Volontairement limité aux trois que nous avons MESURÉS sur le serveur.
@@ -65,6 +93,23 @@ class Converter
 	);
 
 	public const FILTER_DEFAULT = 'catrom';
+
+	/**
+	 * Nombre de pixels au-delà duquel on refuse de décoder.
+	 *
+	 * ESTIMATION, pas une mesure — et volontairement très large. Le plus gros
+	 * capteur de téléphone du marché produit 200 Mpx ; aucune photo réelle
+	 * n'atteint donc ce plafond, et un membre légitime ne peut pas s'y heurter.
+	 * Il n'est là que pour arrêter l'absurde : un fichier de quelques centaines
+	 * d'octets peut DÉCLARER 60 000 × 60 000 pixels dans son en-tête, soit
+	 * 3,6 milliards de pixels. En Q16, ImageMagick alloue 8 octets par pixel —
+	 * 250 Mpx font déjà 2 Go, pris HORS du tas PHP, donc sans que
+	 * `memory_limit` n'y puisse rien : c'est le processus entier que l'OS tue,
+	 * en emportant la requête du membre qui passait par là.
+	 *
+	 * À relever si un refus légitime apparaît un jour dans les journaux.
+	 */
+	public const MAX_PIXELS = 250000000;
 
 	protected int $maxWidth;
 	protected int $maxHeight;
@@ -251,6 +296,118 @@ class Converter
 	}
 
 	/**
+	 * Quel codeur ImageMagick imposer pour ce fichier ?
+	 *
+	 * Le contenu vient d'un membre, et son extension n'est que le nom qu'il a
+	 * choisi : `attach_ext` est découpé dans le nom d'envoi brut
+	 * (File.php:1369-1377). Le coeur ne contrôle le contenu QUE des extensions
+	 * qu'il sait afficher (File.php:632, via getimagesize) — et « heic » n'en
+	 * fait justement pas partie, `Image::$imageExtensions` ne listant que
+	 * gif/jpeg/png, plus webp et avif selon la build (Image.php:40,
+	 * Imagemagick.php:389-404). Un PNG truqué serait refusé à l'envoi ; un
+	 * HEIC truqué passe.
+	 *
+	 * Notre décodage est donc le PREMIER de la chaîne à voir ces octets, et il
+	 * était le seul sans garde : `new Imagick( $chemin )` choisit son décodeur
+	 * en reniflant le contenu, parmi tous les codeurs enregistrés. Reconnaître
+	 * la signature nous-mêmes et imposer le codeur ferme ce choix.
+	 *
+	 * On ne se contente pas de refuser le non-HEIF : un vrai JPEG renommé en
+	 * .heic — cas banal, certains outils de transfert le font — continue
+	 * d'être converti, donc affiché. Refuser tout sauf le HEIF transformerait
+	 * un correctif de sécurité en régression pour le membre.
+	 *
+	 * @param	string	$path	Chemin du fichier à examiner
+	 * @return	string|null		Préfixe de codeur, NULL si non reconnu
+	 */
+	public static function coderFor( string $path ) : ?string
+	{
+		/* 64 octets : de quoi couvrir la boîte ftyp complète d'un HEIC réel,
+		   marques compatibles comprises, sans jamais lire le fichier entier. */
+		$header = @file_get_contents( $path, FALSE, NULL, 0, 64 );
+
+		if ( $header === FALSE or strlen( $header ) < 12 )
+		{
+			return NULL;
+		}
+
+		/* ISOBMFF : la boîte « ftyp » est obligatoirement la première. Sa
+		   marque MAJEURE occupe les octets 8 à 11, suivie de la version
+		   mineure (12-15) puis de la liste des marques COMPATIBLES, par
+		   groupes de quatre octets jusqu'à la fin de la boîte.
+		   Il faut lire les deux : la norme HEIF admet qu'un fichier annonce
+		   une marque majeure quelconque tant que « heic » ou « mif1 » figure
+		   parmi les compatibles, et des encodeurs le font. S'en tenir à la
+		   marque majeure aurait refusé des HEIC parfaitement valides — donc
+		   laissé la photo d'un membre en lien de téléchargement. */
+		if ( substr( $header, 4, 4 ) === 'ftyp' )
+		{
+			$major = substr( $header, 8, 4 );
+
+			/* La marque MAJEURE prime, et se lit en premier. L'ordre n'est pas
+			   indifférent : un AVIF légitime liste « mif1 » parmi ses marques
+			   compatibles, si bien qu'examiner les compatibles d'abord le
+			   faisait décoder par le codeur HEIF. Vérifié par jeu d'essai. */
+			if ( $major === 'avif' )
+			{
+				return static::CODERS['avif'];
+			}
+
+			if ( in_array( $major, static::HEIF_BRANDS, TRUE ) )
+			{
+				return static::CODERS['heif'];
+			}
+
+			/* Marque majeure inconnue : la norme HEIF admet qu'un fichier
+			   l'annonce ainsi tant que « heic » ou « mif1 » figure parmi ses
+			   marques compatibles, et des encodeurs le font. S'en tenir à la
+			   marque majeure refuserait des HEIC valides — donc laisserait la
+			   photo d'un membre en lien de téléchargement.
+			   Les compatibles suivent la version mineure, par groupes de
+			   quatre octets jusqu'à la fin de la boîte. La taille annoncée est
+			   bornée par ce qu'on a lu : un en-tête déclarant une boîte énorme
+			   ne doit pas nous faire sortir du tampon. */
+			$size    = unpack( 'N', substr( $header, 0, 4 ) )[1];
+			$compat  = array();
+
+			for ( $offset = 16; $offset + 4 <= min( $size, strlen( $header ) ); $offset += 4 )
+			{
+				$compat[] = substr( $header, $offset, 4 );
+			}
+
+			if ( in_array( 'avif', $compat, TRUE ) )
+			{
+				return static::CODERS['avif'];
+			}
+
+			return array_intersect( $compat, static::HEIF_BRANDS ) ? static::CODERS['heif'] : NULL;
+		}
+
+		/* Mêmes signatures que \IPS\Image::create() (Image.php:76-127). */
+		if ( bin2hex( substr( $header, 0, 3 ) ) === 'ffd8ff' )
+		{
+			return static::CODERS['jpeg'];
+		}
+
+		if ( bin2hex( substr( $header, 0, 8 ) ) === '89504e470d0a1a0a' )
+		{
+			return static::CODERS['png'];
+		}
+
+		if ( substr( $header, 0, 4 ) === 'RIFF' and substr( $header, 8, 4 ) === 'WEBP' )
+		{
+			return static::CODERS['webp'];
+		}
+
+		if ( substr( $header, 0, 6 ) === 'GIF87a' or substr( $header, 0, 6 ) === 'GIF89a' )
+		{
+			return static::CODERS['gif'];
+		}
+
+		return NULL;
+	}
+
+	/**
 	 * Produire l'AVIF et sa vignette à partir d'un HEIC local.
 	 *
 	 * Un SEUL décodage sert aux deux fichiers. C'est important pour deux
@@ -271,7 +428,7 @@ class Converter
 	 *
 	 * @param	string	$source			Chemin du HEIC source
 	 * @param	string	$avifTarget		Chemin de l'AVIF à produire
-	 * @param	string	$thumbTarget	Chemin de la vignette, SANS extension
+	 * @param	string	$thumbTarget	Chemin de la vignette à produire
 	 * @param	int		$thumbWidth		Largeur maximale de la vignette
 	 * @param	int		$thumbHeight	Hauteur maximale de la vignette
 	 * @param	int		$thumbQuality	Qualité de la vignette
@@ -292,6 +449,15 @@ class Converter
 			throw new RuntimeException( "Source illisible : {$source}" );
 		}
 
+		/* Refus AVANT qu'ImageMagick ne voie les octets : c'est le seul moment
+		   où le refus coûte zéro. */
+		$coder = static::coderFor( $source );
+
+		if ( $coder === NULL )
+		{
+			throw new RuntimeException( "Contenu non reconnu comme image : décodage refusé." );
+		}
+
 		$started = microtime( TRUE );
 		$image   = NULL;
 
@@ -304,16 +470,85 @@ class Converter
 		   deux fichiers sortent d'un décodage unique : à 1000 px on encode
 		   quatre fois moins de pixels qu'à 2048. */
 		$thumbFormat = 'avif';
-		$thumbPath   = $thumbTarget . '.' . $thumbFormat;
+
+		/* La cible est prise TELLE QUELLE, sans extension dérivée. La version
+		   précédente écrivait dans « $thumbTarget.avif » : un chemin que
+		   tempnam() n'avait pas créé, donc sans sa réservation atomique ni son
+		   mode 0600, dans un /tmp partagé. L'extension n'a de toute façon
+		   aucune importance pour Imagick, le format étant fixé par
+		   setImageFormat() quelques lignes plus bas. */
+		$thumbPath = $thumbTarget;
 
 		try
 		{
-			/* Au-delà de 2 threads le gain est nul (mesuré : 1,87 s à 2
+			/* SEULE limite globale que nous posons, et c'est assumé — à ne pas
+			   confondre avec le plafond de mémoire écarté quinze lignes plus
+			   bas. setResourceLimit() est statique ici aussi, la valeur survit
+			   donc à la conversion dans le même worker. La différence est le
+			   SENS : à 2 sur une machine à 4 coeurs on ABAISSE, ce qui ne peut
+			   pas assouplir la politique de l'hébergeur. Le pire effet de bord
+			   est un redimensionnement du coeur sur 2 threads au lieu de 4 :
+			   plus lent, jamais cassé.
+			   Au-delà de 2 threads le gain est nul (mesuré : 1,87 s à 2
 			   threads, 1,90 s à 4) alors que le coût CPU double — ce qui
 			   compte dès que plusieurs membres téléversent simultanément. */
 			Imagick::setResourceLimit( Imagick::RESOURCETYPE_THREAD, $this->threads );
 
-			$image = new Imagick( $source );
+			$image = new Imagick;
+
+			/* On LIT l'en-tête avant de décoder quoi que ce soit. pingImage()
+			   n'alloue pas le tampon de pixels : c'est le seul moment où l'on
+			   connaît les dimensions annoncées sans avoir déjà payé le prix de
+			   les croire.
+			   La parade évidente aurait été de plafonner la MÉMOIRE par
+			   Imagick::setResourceLimit(), mais c'est une méthode STATIQUE :
+			   le plafond survit à notre conversion et s'applique à tout ce que
+			   le worker PHP-FPM traitera ensuite — y compris les
+			   redimensionnements du reste du forum. Poser un plafond généreux
+			   ASSOUPLIRAIT la politique de l'hébergeur pour les autres
+			   requêtes. Un contrôle local n'a pas cet effet de bord. */
+			$image->pingImage( $coder . $source );
+
+			/* La SOMME de toutes les images du fichier, et non la seule image
+			   sur laquelle l'itérateur se trouve. pingImage() peuple l'objet
+			   avec TOUTES les images du conteneur — trames d'un GIF ou d'un
+			   WEBP animé, images de haut niveau d'un HEIF —, alors que
+			   getImageWidth() ne rend que celle de l'image courante.
+			   N'en mesurer qu'une laissait la garde se contourner par
+			   construction : 200 trames de 4 000 × 4 000 en aplat uniforme
+			   tiennent dans quelques mégaoctets compressés et totalisent
+			   3,2 milliards de pixels, quand la première trame en annonce 16
+			   millions. Et coderFor() accepte délibérément gif et webp sous une
+			   extension .heic : le fichier n'a même pas besoin d'être un HEIF.
+			   Sommer ne peut produire aucun refus abusif — une vraie rafale
+			   HEIC reste à quelques dizaines de Mpx face au plafond. */
+			$frames = $image->getNumberImages();
+			$pixels = 0;
+
+			for ( $i = 0; $i < $frames; $i++ )
+			{
+				$image->setIteratorIndex( $i );
+				$pixels += $image->getImageWidth() * $image->getImageHeight();
+			}
+
+			if ( $pixels > static::MAX_PIXELS )
+			{
+				/* Le nombre d'images figure dans le message : c'est ce qui
+				   distingue dans le journal « une photo trop grande » d'un
+				   fichier fabriqué pour faire tomber le processus. */
+				throw new RuntimeException( sprintf(
+					'Image refusée : %s pixels annoncés sur %d image(s), au-delà du plafond de %s.',
+					number_format( $pixels, 0, ',', ' ' ),
+					$frames,
+					number_format( static::MAX_PIXELS, 0, ',', ' ' )
+				) );
+			}
+
+			$image->clear();
+
+			/* Le codeur est IMPOSÉ, jamais deviné : « heic:/chemin » plutôt
+			   que « /chemin ». Voir coderFor(). */
+			$image = new Imagick( $coder . $source );
 			$image->autoOrient();
 			$image->transformImageColorspace( Imagick::COLORSPACE_SRGB );
 			$image->stripImage();

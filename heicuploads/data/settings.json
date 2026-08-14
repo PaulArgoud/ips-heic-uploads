@@ -6,7 +6,7 @@
     },
     {
         "key": "heicuploads_baseline_id",
-        "default": "0",
+        "default": "-1",
         "report": "full"
     },
     {

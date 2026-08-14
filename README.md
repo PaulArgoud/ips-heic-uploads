@@ -2,7 +2,7 @@
 
 **Les photos d'iPhone ne s'affichent pas sur votre forum ? Cette application les convertit.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](CHANGELOG.md)
 [![Invision Community](https://img.shields.io/badge/Invision%20Community-5.0%2B-1D5AC1.svg)](https://invisioncommunity.com/)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![ImageMagick](https://img.shields.io/badge/ImageMagick-libheif%20%2B%20AVIF-C21325.svg)](https://imagemagick.org/)
@@ -148,6 +148,11 @@ additives et rejouables. Il ne touche à aucune pièce jointe.
 | Vitesse d'encodage | 9 | Même poids que 6, sept fois plus rapide |
 | Threads | 2 | Au-delà, gain nul et coût processeur doublé |
 
+Le bloc d'état, au-dessus du formulaire, affiche l'aptitude du serveur, le
+**repère de départ**, le décompte des conversions, et un bouton **Relancer les
+conversions bloquées** dès qu'il y en a. Il n'existait auparavant aucun moyen de
+relancer un échec sans passer par une requête SQL.
+
 Les **dimensions maximales** viennent des réglages natifs d'Invision Community
 (`attachment_resample_size` et `attachment_image_size`). Il n'y a délibérément
 pas de réglage concurrent : deux valeurs pour la même chose finissent toujours
@@ -194,14 +199,18 @@ php applications/heicuploads/tools/import-lang.php french 2 --ecrire
 à l'affichage — y compris la réécriture des messages publiés avant la fin de la
 conversion.
 
-Une limite connue, à laquelle personne ne s'est encore heurté : si le processus
-de conversion est tué en cours de route (dépassement mémoire, par exemple), la
-tentative est comptabilisée mais l'échec n'est jamais consigné. La ligne reste
-« en attente », n'est plus rejouée une fois le plafond de tentatives atteint, et
-le bloc d'état continue de l'annoncer comme normale. Correction prévue.
+La **1.0.1 est une version d'audit, pas encore déployée**. Elle corrige les deux
+limites connues de la 1.0.0 et deux bogues qui étaient bel et bien en
+production : la page de réglages tombait en erreur fatale à l'enregistrement, et
+la déduplication de la file d'attente ne dédupliquait rien. Elle ferme aussi
+deux trous de sécurité — le contenu envoyé par un membre était confié à
+ImageMagick sans qu'on ait vérifié que c'était une image, et un repère de départ
+jamais posé était indiscernable de zéro, valeur qui autorise la conversion
+rétroactive de tout l'historique. Une conversion interrompue est désormais
+fermée, comptée et **relançable depuis l'AdminCP**.
 
-Voir le [CHANGELOG](CHANGELOG.md) pour l'historique, y compris les incidents et
-ce qu'ils ont appris.
+Voir le [CHANGELOG](CHANGELOG.md) pour le détail, les preuves, et l'historique
+des incidents avec ce qu'ils ont appris.
 
 ## Contribuer
 

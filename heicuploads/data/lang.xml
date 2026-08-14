@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language>
- <app key="heicuploads" version="10000">
+ <app key="heicuploads" version="10002">
   <word key="__app_heicuploads" js="0">HEIC Uploads</word>
   <word key="__app_heicuploads_description" js="0">Converts HEIC and HEIF photos from iPhones into AVIF so that they display normally in posts, instead of appearing as unusable download links. Conversion runs in the background and never prevents a member from posting.</word>
   <word key="menu__heicuploads_heicuploads" js="0">HEIC Uploads</word>
@@ -11,6 +11,12 @@
   <word key="heicuploads_status_ko" js="0">Conversion is not possible on this server.</word>
   <word key="heicuploads_status_counts" js="0">%d converted, %d pending, %d failed.</word>
   <word key="heicuploads_status_failed_hint" js="0">Details of the failures are in the system logs, category “heicuploads”.</word>
+  <word key="heicuploads_retry_button" js="0">Retry blocked conversions</word>
+  <word key="heicuploads_retry_done" js="0">Blocked conversions have been queued again.</word>
+  <word key="heicuploads_filter_catrom" js="0">Catrom — balanced (recommended)</word>
+  <word key="heicuploads_filter_lanczos" js="0">Lanczos — sharper, slower</word>
+  <word key="heicuploads_filter_triangle" js="0">Triangle — faster, softer</word>
+  <word key="heicuploads_status_no_baseline" js="0">The starting point has not been set, so detection is suspended and no new photo will be converted. This happens when installation was interrupted at its last step. Reinstall the application from Applications to set it.</word>
   <word key="heicuploads_enabled" js="0">Convert HEIC uploads</word>
   <word key="heicuploads_enabled_desc" js="0">When enabled, HEIC and HEIF photos uploaded by members are converted to AVIF so that browsers can display them. Turn this off to stop all conversion without uninstalling the application; photos already converted are unaffected.</word>
   <word key="heicuploads_quality" js="0">AVIF quality</word>
@@ -24,6 +30,6 @@
   <word key="heicuploads_threads" js="0">ImageMagick threads</word>
   <word key="heicuploads_threads_desc" js="0">CPU threads allocated to each conversion. Beyond 2 the gain measured here was nil while CPU cost doubled, which penalises the rest of the forum when several members upload at once. Raise this only with measurements to back it up.</word>
   <word key="heicuploads_queue_progress" js="0">Converting HEIC photos to AVIF</word>
-  <word key="scanHeic" js="0">Find HEIC attachments awaiting conversion</word>
+  <word key="task__scanHeic" js="0">Find HEIC attachments awaiting conversion</word>
  </app>
 </language>

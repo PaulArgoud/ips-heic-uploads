@@ -1,10 +1,4 @@
 <?php
-
-if ( PHP_SAPI !== 'cli' )
-{
-	header( ( $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.0' ) . ' 403 Forbidden' );
-	exit;
-}
 /**
  * Test du moteur de conversion, hors Invision Community.
  *
@@ -14,6 +8,16 @@ if ( PHP_SAPI !== 'cli' )
  *
  * Usage : php tools/selftest.php photo.heic [autre.heic ...]
  */
+
+/* Garde écrite ici et non empruntée à _bootstrap.php : cet outil est le SEUL
+   à ne pas charger init.php — c'est même sa raison d'être, éprouver le moteur
+   avant que l'application ne soit installée. Il doit malgré tout refuser
+   l'accès HTTP comme les autres, d'où cette recopie assumée de quatre lignes. */
+if ( PHP_SAPI !== 'cli' )
+{
+	header( ( $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.0' ) . ' 403 Forbidden' );
+	exit;
+}
 
 /* Le moteur porte la garde anti-accès direct des fichiers IPS. En contexte
    de test on la satisfait explicitement.
@@ -92,7 +96,7 @@ foreach ( $sources as $source )
 	try
 	{
 		/* Un seul appel : l'AVIF et la vignette sortent du même décodage. */
-		$result = $converter->process( $source, $avif, $base . '.thumb' );
+		$result = $converter->process( $source, $avif, $base . '.thumb.avif' );
 
 		$stats = $result['avif'];
 		$thumb = $result['thumb'];

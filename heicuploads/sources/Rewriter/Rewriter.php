@@ -14,6 +14,7 @@ use IPS\Db;
 use IPS\Log;
 use IPS\Text\Parser;
 use IPS\Xml\DOMDocument;
+use LogicException;
 use OutOfRangeException;
 use Throwable;
 use UnexpectedValueException;
@@ -103,11 +104,37 @@ class Rewriter
 	 */
 	protected static function rewriteOne( array $map, array $attachment ) : bool
 	{
+		$result = static::transform(
+			$map,
+			static fn( string $html ) : ?string => static::replaceInHtml( $html, $attachment )
+		);
+
+		return ( $result !== NULL and $result['changed'] );
+	}
+
+	/**
+	 * Appliquer une transformation au HTML d'un contenu.
+	 *
+	 * Point d'entrée commun à la réécriture et aux outils de réparation. La
+	 * résolution du contenu depuis core_attachments_map et la localisation de
+	 * sa colonne HTML ne vivent QU'ICI : les avoir recopiées dans
+	 * tools/repair-fullimage.php avait suffi à faire diverger les deux
+	 * versions, sur le rattrapage d'exceptions.
+	 *
+	 * @param	array		$map			Ligne de core_attachments_map
+	 * @param	callable	$transformer	fn( string $html ) : ?string — NULL si rien à faire
+	 * @param	bool		$write			FALSE pour simuler sans écrire
+	 * @return	array|null					NULL si le contenu est introuvable ;
+	 *										sinon table, id, changed, html
+	 * @throws	UnderflowException			Si la ligne de contenu a disparu entre-temps
+	 */
+	public static function transform( array $map, callable $transformer, bool $write = TRUE ) : ?array
+	{
 		$object = static::contentFor( $map );
 
 		if ( $object === NULL )
 		{
-			return FALSE;
+			return NULL;
 		}
 
 		$class = $object::class;
@@ -119,43 +146,70 @@ class Rewriter
 
 		if ( $column === NULL )
 		{
-			return FALSE;
+			return NULL;
 		}
 
-		/* Certaines classes mappent plusieurs colonnes sur un même rôle. */
+		/* Certaines classes mappent plusieurs colonnes sur un même rôle. Le
+		   coeur retient le DERNIER élément, pas le premier : c'est ce que fait
+		   Content::mapped(), par où passe toute lecture du contenu
+		   (system/Content/Content.php:388-393). Aucune classe livrée n'a
+		   aujourd'hui plus d'une colonne de contenu, mais autant se tromper du
+		   même côté que le coeur le jour où ça changera. */
 		if ( is_array( $column ) )
 		{
-			$column = reset( $column );
+			$column = array_pop( $column );
 		}
 
 		$table    = $class::$databaseTable;
 		$prefix   = $class::$databasePrefix;
 		$idColumn = $class::$databaseColumnId;
 
-		$row = Db::i()->select(
+		/* $class::db() et non Db::i() : les messages archivés des forums
+		   vivent dans une AUTRE connexion dès que archive_remote_sql_host est
+		   réglé (applications/forums/sources/Topic/ArchivedPost.php:50-68), et
+		   l'extension EditorLocations des forums rend bien un ArchivedPost.
+		   Avec Db::i(), on lirait et on écrirait dans la mauvaise base.
+		   Par défaut, ActiveRecord::db() rend Db::i() : rien ne change pour
+		   les autres classes (system/Patterns/ActiveRecord.php:94-97). */
+		$db = $class::db();
+
+		$row = $db->select(
 			'*',
 			$table,
 			array( $prefix . $idColumn . '=?', $object->$idColumn )
 		)->first();
 
 		$original = $row[ $prefix . $column ];
-		$updated  = static::replaceInHtml( $original, $attachment );
+		$updated  = $transformer( $original );
 
-		if ( $updated === NULL )
+		if ( $updated === NULL or $updated === $original )
 		{
-			return FALSE;
+			return array(
+				'table'   => $table,
+				'id'      => $object->$idColumn,
+				'changed' => FALSE,
+				'html'    => $original,
+			);
 		}
 
 		/* Écriture directe plutôt que save() : on ne veut déclencher ni
 		   réindexation, ni notification, ni horodatage d'édition. Le contenu
 		   sémantique du message n'a pas changé, seule sa représentation. */
-		Db::i()->update(
-			$table,
-			array( $prefix . $column => $updated ),
-			array( $prefix . $idColumn . '=?', $object->$idColumn )
-		);
+		if ( $write )
+		{
+			$db->update(
+				$table,
+				array( $prefix . $column => $updated ),
+				array( $prefix . $idColumn . '=?', $object->$idColumn )
+			);
+		}
 
-		return TRUE;
+		return array(
+			'table'   => $table,
+			'id'      => $object->$idColumn,
+			'changed' => TRUE,
+			'html'    => $updated,
+		);
 	}
 
 	/**
@@ -183,7 +237,10 @@ class Rewriter
 		}
 		catch( OutOfRangeException | UnexpectedValueException $e )
 		{
-			/* Application désinstallée ou désactivée. */
+			/* Application désinstallée. Pas « désactivée » : Application::load()
+			   ne consulte jamais app_enabled, une application désactivée se
+			   charge et rend ses extensions — et c'est tant mieux, son contenu
+			   existe toujours en base et mérite d'être réécrit. */
 			return NULL;
 		}
 
@@ -192,7 +249,24 @@ class Rewriter
 			return NULL;
 		}
 
-		$object = $extensions[ $exploded[1] ]->attachmentLookup( $map['id1'], $map['id2'], $map['id3'] );
+		/* attachmentLookup() n'est pas tenue de rendre quelque chose : celle
+		   des lieux du calendrier lève LogicException inconditionnellement
+		   (applications/calendar/extensions/core/EditorLocations/Venue.php:73-75),
+		   et celles des catégories de la galerie et des téléchargements font
+		   un Category::load() sans filet, d'où OutOfRangeException si la
+		   catégorie a disparu. Le coeur rattrape ces deux cas au même endroit,
+		   « LogicException | OutOfRangeException »
+		   (system/Content/Statistics.php:666).
+		   Un seul suffit ici : OutOfRangeException DÉRIVE de LogicException
+		   (SPL), la seconde branche du coeur est redondante. */
+		try
+		{
+			$object = $extensions[ $exploded[1] ]->attachmentLookup( $map['id1'], $map['id2'], $map['id3'] );
+		}
+		catch( LogicException $e )
+		{
+			return NULL;
+		}
 
 		/* attachmentLookup peut aussi rendre un Node, une Url ou un Member
 		   selon l'implémentation : seul le contenu nous intéresse. */
