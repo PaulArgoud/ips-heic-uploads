@@ -71,3 +71,6 @@ composer.lock
 .phpunit.result.cache
 .php-cs-fixer.cache
 .phpcs-cache
+
+# Archives de release, fabriquees par ./build-release.sh
+*.tar

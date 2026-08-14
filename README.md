@@ -1,56 +1,58 @@
 # HEIC Uploads
 
-**Les photos d'iPhone ne s'affichent pas sur votre forum ? Cette application les convertit.**
+**iPhone photos won't display on your forum? This application converts them.**
 
 [![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](CHANGELOG.md)
 [![Invision Community](https://img.shields.io/badge/Invision%20Community-5.0%2B-1D5AC1.svg)](https://invisioncommunity.com/)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![ImageMagick](https://img.shields.io/badge/ImageMagick-libheif%20%2B%20AVIF-C21325.svg)](https://imagemagick.org/)
-[![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
-[![Langues](https://img.shields.io/badge/langues-5-orange.svg)](#langues)
-[![Statut](https://img.shields.io/badge/statut-stable-brightgreen.svg)](#%C3%A9tat-du-projet)
-[![PRs bienvenues](https://img.shields.io/badge/PRs-bienvenues-brightgreen.svg)](#contribuer)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Languages](https://img.shields.io/badge/languages-5-orange.svg)](#languages)
+[![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)](#project-status)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
 ---
 
-## Le problème
+## The problem
 
-Les iPhone récents photographient en **HEIC**. Invision Community ne sait pas
-lire ce format : `\IPS\Image::create()` identifie les images par leurs octets
-magiques et ne reconnaît ni HEIC ni HEIF.
+Recent iPhones shoot in **HEIC**. Invision Community cannot read that format:
+`\IPS\Image::create()` identifies images by their magic bytes, and recognizes
+neither HEIC nor HEIF.
 
-Résultat côté membre : la photo est bien envoyée, mais elle apparaît dans le
-message comme un **lien de téléchargement inutilisable** au lieu d'une image.
-Sur un forum où l'on partage des photos, c'est un défaut qui se voit tous les
-jours.
+What the member sees: the photo uploads fine, but it shows up in the post as an
+**unusable download link** instead of an image. On a forum where people share
+photos, that is a defect you run into every day.
 
-## La solution
+## The solution
 
-HEIC Uploads convertit ces photos en **AVIF** — un format qu'Invision Community
-sait afficher — sans jamais bloquer la publication du message.
+HEIC Uploads converts those photos to **AVIF** — a format Invision Community
+does display — without ever blocking the post from going through.
 
 ```mermaid
 flowchart TD
-    A["📱 Le membre dépose une photo HEIC"] --> B["IPS l'enregistre telle quelle<br/><i>attach_is_image = 0</i>"]
-    B --> C{"Tâche scanHeic<br/>chaque minute"}
-    C -->|"identifiant &gt; repère"| D["Mise en file d'attente"]
-    C -->|"antérieur au repère"| Z["Ignoré<br/><i>pas de conversion rétroactive</i>"]
+    A["📱 Member uploads a HEIC photo"] --> B["IPS stores it as-is<br/><i>attach_is_image = 0</i>"]
+    B --> C{"scanHeic task<br/>every minute"}
+    C -->|"id &gt; baseline"| D["Queued for conversion"]
+    C -->|"below baseline"| Z["Skipped<br/><i>no retroactive conversion</i>"]
 
-    D --> E["Décodage HEIC<br/><i>une seule fois</i>"]
-    E --> F["AVIF pleine taille<br/><i>qualité 65</i>"]
-    E --> G["Vignette AVIF<br/><i>qualité 25</i>"]
+    D --> S{"Content recognized<br/>as an image?"}
+    S -->|no| X["Failure logged<br/><i>the post is untouched</i>"]
+    S -->|yes| E["HEIC decoded<br/><i>once, with an imposed coder</i>"]
 
-    F --> H{"Marque ftypavif<br/>conforme ?"}
+    E --> F["Full-size AVIF<br/><i>quality 65</i>"]
+    E --> G["AVIF thumbnail<br/><i>quality 25</i>"]
+
+    F --> H{"ftypavif brand<br/>valid?"}
     G --> H
-    H -->|non| X["Échec journalisé<br/><i>le message reste intact</i>"]
-    H -->|oui| I["Bascule de core_attachments<br/><i>attach_is_image = 1</i>"]
+    H -->|no| X
+    H -->|yes| I["core_attachments switched<br/><i>attach_is_image = 1</i>"]
 
-    I --> J{"Le message était-il<br/>déjà publié ?"}
-    J -->|non| K["✅ Le HTML est écrit<br/>avec une balise image"]
-    J -->|oui| L["Réécriture du HTML publié<br/><i>Rewriter</i>"]
+    I --> J{"Was the post<br/>already published?"}
+    J -->|no| K["✅ HTML written<br/>with an image tag"]
+    J -->|yes| L["Published HTML rewritten<br/><i>Rewriter</i>"]
     L --> K
 
-    I --> M["🗑️ Suppression du HEIC d'origine"]
+    K --> M["🗑️ Original HEIC deleted"]
 
     style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
     style K fill:#e8f5e9,stroke:#388e3c,color:#1b5e20
@@ -59,35 +61,34 @@ flowchart TD
     style M fill:#fce4ec,stroke:#c2185b,color:#880e4f
 ```
 
-> ⚠️ **L'original HEIC est supprimé après conversion.** C'est un choix assumé,
-> pas un effet de bord : la photo pleine résolution est perdue. Sauvegardez
-> votre répertoire d'envois avant d'installer.
+> ⚠️ **The original HEIC is deleted after conversion.** This is a deliberate
+> choice, not a side effect: the full-resolution photo is gone. Back up your
+> uploads directory before installing.
 
-## Pourquoi AVIF
+## Why AVIF
 
 | | HEIC | AVIF | WebP |
 |---|---|---|---|
-| Affiché par Invision Community | ❌ | ✅ | ✅ |
-| Poids d'une photo de 12 Mpx | 2,1 Mo | **~90 Ko** | ~500 Ko |
-| Temps d'encodage mesuré | — | **0,20 s** | 0,87 s |
+| Displayed by Invision Community | ❌ | ✅ | ✅ |
+| Size of a 12 MP photo | 2.1 MB | **~90 KB** | ~500 KB |
+| Measured encoding time | — | **0.20 s** | 0.87 s |
 
-Mesures sur un serveur à 4 cœurs, ImageMagick 7.1.1-43, photo iPhone 4032×3024.
-L'AVIF s'est révélé à la fois **plus rapide à encoder et cinq fois plus léger**
-que le WebP — le choix n'a pas été un arbitrage.
+Measured on a 4-core server, ImageMagick 7.1.1-43, iPhone photo at 4032×3024.
+AVIF turned out to be both **faster to encode and five times lighter** than
+WebP — the choice was not a trade-off.
 
-## Prérequis
+## Requirements
 
-- Invision Community **5.0** ou supérieur
-- PHP **8.1** ou supérieur (pour `IMAGETYPE_AVIF`)
-- Extension **imagick**, avec ImageMagick compilé avec :
-  - le délégué **libheif** (décodage HEIC)
-  - un délégué **AVIF** (libaom ou libavif)
+- Invision Community **5.0** or later
+- PHP **8.1** or later (for `IMAGETYPE_AVIF`)
+- The **imagick** extension, with ImageMagick compiled with:
+  - the **libheif** delegate (HEIC decoding)
+  - an **AVIF** delegate (libaom or libavif)
 
-L'application **refuse de s'installer** si l'un de ces points manque, et dit
-précisément lequel et comment le corriger. Aucune installation silencieusement
-inopérante.
+The application **refuses to install** if any of these is missing, and tells you
+exactly which one and how to fix it. No silently inoperative install.
 
-Pour vérifier avant d'installer :
+To check before installing:
 
 ```bash
 php -r 'var_dump( in_array("HEIC", Imagick::queryFormats()), in_array("AVIF", Imagick::queryFormats()) );'
@@ -95,139 +96,154 @@ php -r 'var_dump( in_array("HEIC", Imagick::queryFormats()), in_array("AVIF", Im
 
 ## Installation
 
-1. Copier le répertoire `heicuploads` dans `applications/` de votre forum.
-2. Installer l'application depuis **AdminCP → Système → Applications**.
-3. Autoriser l'extension `heic` dans les types de fichiers joints — sans quoi
-   les membres ne pourront pas envoyer de HEIC du tout.
-4. Vérifier le bloc d'état sur **AdminCP → Communauté → HEIC Uploads**.
+1. Copy the `heicuploads` directory into your forum's `applications/`.
+2. Install the application from **AdminCP → System → Applications**.
+3. Allow the `heic` extension in your attachment file types — otherwise members
+   cannot upload HEIC at all.
+4. Check the status block under **AdminCP → Community → HEIC Uploads**.
 
-## Mise à jour
+## Updating
 
-**Copier les nouveaux fichiers ne suffit pas.** Les manifestes `data/*.json` et
-`data/lang.xml` ne sont relus qu'à l'installation ou à une montée de version.
-Sans réconciliation, une version apportant un réglage ou un libellé nouveau
-s'installe dans un état trompeur :
+**Copying the new files is not enough.** The `data/*.json` manifests and
+`data/lang.xml` are only read at install time or on a version upgrade. Without
+reconciliation, a version that adds a setting or a label installs into a
+misleading state:
 
-- le réglage n'existe pas en base, et `Settings::changeValues()` **l'ignore
-  silencieusement** — la page de réglages paraît fonctionner et n'enregistre
-  rien ;
-- le libellé n'existe pas, et l'AdminCP affiche la clé brute ;
-- une colonne manquante bloque toute la chaîne, visible seulement dans les
-  journaux.
+- the setting does not exist in the database, and `Settings::changeValues()`
+  **silently ignores it** — the settings page appears to work and saves nothing;
+- the label does not exist, and the AdminCP shows the raw key;
+- a missing column breaks the whole chain, visible only in the logs.
 
-D'où la marche à suivre :
+Hence the procedure:
 
 ```bash
-# 1. Copier les fichiers dans applications/heicuploads/
+# 1. Copy the files into applications/heicuploads/
 
-# 2. Voir ce qui manque en base — ne modifie rien
+# 2. See what is missing in the database — changes nothing
 php applications/heicuploads/tools/deploy-sync.php
 
-# 3. Appliquer
+# 3. Apply
 php applications/heicuploads/tools/deploy-sync.php --ecrire
 
-# 4. Réappliquer la traduction, maintenant que les libellés existent
+# 4. Re-apply the translation, now that the labels exist
 php applications/heicuploads/tools/import-lang.php french <id> --ecrire
 
-# 5. Contrôler la chaîne de bout en bout
+# 5. Check the chain end to end
 php applications/heicuploads/tools/diagnose.php
 ```
 
-`deploy-sync.php` n'écrit rien de sa main : il appelle les routines du cœur
-(`installDatabaseSchema`, `installJsonData`, `installLanguages`), qui sont
-additives et rejouables. Il ne touche à aucune pièce jointe.
+`deploy-sync.php` writes nothing of its own: it calls the core's own routines
+(`installDatabaseSchema`, `installJsonData`, `installLanguages`), which are
+additive and repeatable. It never touches an attachment.
 
-## Réglages
+One caveat worth knowing: `installTasks()` issues a `REPLACE INTO` on four
+columns of `core_tasks`, so `enabled`, `last_run`, `lock_count` and `running`
+revert to their schema defaults. A task that reports "never run" right after a
+sync has not failed — its history was reset.
 
-| Réglage | Défaut | Effet |
+## Settings
+
+| Setting | Default | Effect |
 |---|---|---|
-| Activation | activé | Coupe la conversion **et** la file d'attente |
-| Qualité AVIF | 65 | ~90 Ko pour une photo de 12 Mpx |
-| Qualité vignette | 25 | La vignette est petite, une valeur basse suffit |
-| Filtre | catrom | Équilibré ; lanczos plus piqué, triangle plus doux |
-| Vitesse d'encodage | 9 | Même poids que 6, sept fois plus rapide |
-| Threads | 2 | Au-delà, gain nul et coût processeur doublé |
+| Enabled | on | Stops conversion **and** the queue |
+| AVIF quality | 65 | ~90 KB for a 12 MP photo |
+| Thumbnail quality | 25 | Thumbnails are small, a low value is enough |
+| Resizing filter | catrom | Balanced; lanczos sharper, triangle softer |
+| Encoding speed | 9 | Same file size as 6, seven times faster |
+| Threads | 2 | Beyond this, no gain and double the CPU cost |
 
-Le bloc d'état, au-dessus du formulaire, affiche l'aptitude du serveur, le
-**repère de départ**, le décompte des conversions, et un bouton **Relancer les
-conversions bloquées** dès qu'il y en a. Il n'existait auparavant aucun moyen de
-relancer un échec sans passer par une requête SQL.
+**Maximum dimensions** come from Invision Community's own settings
+(`attachment_resample_size` and `attachment_image_size`). There is deliberately
+no competing setting: two values for the same thing always end up diverging.
 
-Les **dimensions maximales** viennent des réglages natifs d'Invision Community
-(`attachment_resample_size` et `attachment_image_size`). Il n'y a délibérément
-pas de réglage concurrent : deux valeurs pour la même chose finissent toujours
-par diverger.
+Above the form, the status block reports whether the server can convert, the
+**starting point** below which nothing is ever converted, the conversion
+counters, and a **Retry blocked conversions** button whenever there are any.
 
-## Outillage
+## Tooling
 
-Six scripts, à lancer depuis la racine du forum. Tous refusent de s'exécuter
-par HTTP.
+Six scripts, run from the forum root. All of them refuse to run over HTTP.
 
 ```bash
-php applications/heicuploads/tools/selftest.php photo.heic   # le moteur seul, hors IPS
-php applications/heicuploads/tools/diagnose.php              # où la chaîne casse
-php applications/heicuploads/tools/verify.php                # les conversions sont-elles saines
-php applications/heicuploads/tools/deploy-sync.php           # aligner la base sur le manifeste
-php applications/heicuploads/tools/import-lang.php           # appliquer une traduction
-php applications/heicuploads/tools/repair-fullimage.php      # réparer d'anciennes réécritures
+php applications/heicuploads/tools/selftest.php photo.heic   # the engine alone, without IPS
+php applications/heicuploads/tools/diagnose.php              # where the chain breaks
+php applications/heicuploads/tools/verify.php                # are the conversions sound
+php applications/heicuploads/tools/deploy-sync.php           # align the database with the manifests
+php applications/heicuploads/tools/import-lang.php           # apply a translation
+php applications/heicuploads/tools/repair-fullimage.php      # repair older rewrites
 ```
 
-Ceux qui modifient quelque chose — `deploy-sync`, `import-lang`,
-`repair-fullimage` — sont en **simulation par défaut** et n'écrivent qu'avec
-`--ecrire`.
+The ones that change anything — `deploy-sync`, `import-lang`,
+`repair-fullimage` — **simulate by default** and only write with `--ecrire`.
 
-`selftest.php` mérite un mot : le moteur de conversion ne dépend d'**aucune**
-classe `\IPS`. On peut donc rejouer un fichier litigieux en ligne de commande,
-sans forum, sans base de données.
+`selftest.php` deserves a mention: the conversion engine depends on **no**
+`\IPS` class. You can replay a problematic file from the command line, with no
+forum and no database. It is also the cheapest way to prove a new release on a
+given ImageMagick build before touching the forum.
 
-## Langues
+## Building a release
 
-Anglais _(par défaut)_, français, espagnol, chinois simplifié, hindi.
-
-`data/lang.xml` n'est lu qu'à l'installation. Pour appliquer une traduction
-ensuite :
+Invision Community only accepts an **uncompressed `.tar`** whose root holds the
+*contents* of the application directory. The archives GitHub generates on its
+own are unusable: they are compressed and wrapped in a versioned root folder.
 
 ```bash
-php applications/heicuploads/tools/import-lang.php           # liste les langues
+./build-release.sh v1.0.1
+```
+
+The script builds the archive from the git tag — reproducible, and files that
+git does not track cannot slip in — then checks its structure and refuses to
+produce a non-compliant archive. Attach the result to the GitHub release.
+
+Note that uploading such an archive over an **already installed** application
+goes through the core's upgrade path, which looks for a `setup/` directory this
+application does not have. That path has never been exercised here. To update an
+existing install, copy the files and run `deploy-sync.php`.
+
+## Languages
+
+English _(default)_, French, Spanish, Simplified Chinese, Hindi.
+
+`data/lang.xml` is only read at install time. To apply a translation afterwards:
+
+```bash
+php applications/heicuploads/tools/import-lang.php           # lists the languages
 php applications/heicuploads/tools/import-lang.php french 2 --ecrire
 ```
 
-## État du projet
+## Project status
 
-**Stable.** L'application tourne en production sur un forum réel depuis le
-10 août 2026 : **191 conversions, aucune en échec**, chaîne validée de l'envoi
-à l'affichage — y compris la réécriture des messages publiés avant la fin de la
-conversion.
+**Stable.** The application has been running in production on a real forum since
+10 August 2026: **191 conversions, none failed**, chain validated from upload to
+display — including rewriting posts published before the conversion finished.
 
-La **1.0.1 est une version d'audit, pas encore déployée**. Elle corrige les deux
-limites connues de la 1.0.0 et deux bogues qui étaient bel et bien en
-production : la page de réglages tombait en erreur fatale à l'enregistrement, et
-la déduplication de la file d'attente ne dédupliquait rien. Elle ferme aussi
-deux trous de sécurité — le contenu envoyé par un membre était confié à
-ImageMagick sans qu'on ait vérifié que c'était une image, et un repère de départ
-jamais posé était indiscernable de zéro, valeur qui autorise la conversion
-rétroactive de tout l'historique. Une conversion interrompue est désormais
-fermée, comptée et **relançable depuis l'AdminCP**.
+**1.0.1** is an audit release, deployed on 14 August 2026. It fixes the two
+known limitations of 1.0.0 and two bugs that were live in production: the
+settings page died with a fatal error on save, and the queue's deduplication
+key never matched. It also closes two security gaps — member-supplied content
+was handed to ImageMagick without ever checking it was an image, and a starting
+point that had never been set was indistinguishable from zero, a value that
+authorizes retroactive conversion of the entire attachment history. An
+interrupted conversion is now closed, counted and **retryable from the AdminCP**.
 
-Voir le [CHANGELOG](CHANGELOG.md) pour le détail, les preuves, et l'historique
-des incidents avec ce qu'ils ont appris.
+See the [CHANGELOG](CHANGELOG.md) for the details, the evidence, and the history
+of incidents with what they taught.
 
-## Contribuer
+## Contributing
 
-Les remontées sont bienvenues, surtout accompagnées de la sortie de
-`tools/diagnose.php` — elle situe le problème en six étapes.
+Reports are welcome, especially with the output of `tools/diagnose.php` — it
+locates the problem in six steps.
 
-Le code porte ses raisons en commentaire. Chaque contournement du cœur
-d'Invision Community cite le fichier et la ligne qui le justifient — pourquoi le
-HTML d'un message est figé à la publication, pourquoi `autoOrient()` doit
-précéder `stripImage()`, pourquoi les jetons de stockage sont restitués en
-sortie et non en entrée. Les lire avant de modifier évite de refaire des
-découvertes coûteuses.
+The code carries its reasons in comments. Every workaround for the Invision
+Community core cites the file and line that justify it: why a post's HTML is
+frozen at publication, why `autoOrient()` must precede `stripImage()`, why
+storage tokens are restored on output rather than on input. Reading them before
+making changes saves repeating expensive discoveries.
 
-## Licence
+## License
 
-MIT — voir [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
-## Auteur
+## Author
 
 **Paul ARGOUD** — [paul.argoud.net](https://paul.argoud.net)
