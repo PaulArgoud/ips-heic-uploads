@@ -117,9 +117,9 @@ class Convert extends QueueAbstract
 			   trois fois ne ferait que retarder le même constat, et
 			   l'UnderflowException de Select::first() a un message VIDE —
 			   la ligne finissait « en échec » sans rien dire. */
-			Map::abandon( $row, "La pièce jointe n'existe plus dans core_attachments : retirée par le membre, ou message supprimé." );
+			Map::abandon( $row, "The attachment no longer exists in core_attachments: removed by the member, or the post was deleted." );
 
-			Log::log( "HEIC vers AVIF : pièce jointe {$row['attach_id']} disparue, ligne close sans nouvelle tentative", 'heicuploads' );
+			Log::log( "HEIC Uploads: attachment {$row['attach_id']} is gone; row closed without another attempt", 'heicuploads' );
 		}
 		catch( Throwable $e )
 		{
@@ -164,7 +164,7 @@ class Convert extends QueueAbstract
 			Map::markConverted( $row );
 
 			Log::log(
-				"HEIC vers AVIF : pièce jointe {$row['attach_id']} déjà convertie (« {$attachment['attach_file']} »), ligne régularisée sans reconversion",
+				"HEIC Uploads: attachment {$row['attach_id']} already converted (\"{$attachment['attach_file']}\"); row reconciled without re-converting",
 				'heicuploads'
 			);
 
@@ -191,7 +191,7 @@ class Convert extends QueueAbstract
 
 		if ( $heicTmp === FALSE or $avifTmp === FALSE or $thumbTmp === FALSE )
 		{
-			throw new RuntimeException( 'Fichier temporaire impossible à créer dans ' . \IPS\TEMP_DIRECTORY );
+			throw new RuntimeException( 'Cannot create a temporary file in ' . \IPS\TEMP_DIRECTORY );
 		}
 
 		$avif = $thumbFile = NULL;
@@ -211,7 +211,7 @@ class Convert extends QueueAbstract
 			if ( $written === FALSE or $written !== strlen( $contents ) )
 			{
 				throw new RuntimeException( sprintf(
-					'Copie locale incomplète : %s octets écrits sur %d attendus.',
+					'Incomplete local copy: %s bytes written out of %d expected.',
 					var_export( $written, TRUE ),
 					strlen( $contents )
 				) );
@@ -289,7 +289,7 @@ class Convert extends QueueAbstract
 			}
 			catch( Exception $e )
 			{
-				Log::log( "HEIC vers AVIF : original non supprimé pour la pièce jointe {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
+				Log::log( "HEIC Uploads: original not deleted for attachment {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
 			}
 
 			/* Marquage en DERNIER, délibérément : « converted » veut dire
@@ -319,7 +319,7 @@ class Convert extends QueueAbstract
 					}
 					catch( Exception $e )
 					{
-						Log::log( "HEIC vers AVIF : dérivé orphelin non supprimé pour la pièce jointe {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
+						Log::log( "HEIC Uploads: orphaned derivative not deleted for attachment {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
 					}
 				}
 			}
@@ -356,7 +356,7 @@ class Convert extends QueueAbstract
 			/* Un échec de réécriture laisse un lien au lieu d'une image :
 			   c'est regrettable, jamais bloquant. La conversion, elle,
 			   est acquise. */
-			Log::log( "HEIC vers AVIF : réécriture du message échouée pour la pièce jointe {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
+			Log::log( "HEIC Uploads: post rewrite failed for attachment {$row['attach_id']} — " . $e->getMessage(), 'heicuploads' );
 		}
 	}
 
@@ -373,9 +373,9 @@ class Convert extends QueueAbstract
 
 		Log::log(
 			sprintf(
-				"HEIC vers AVIF : échec sur la pièce jointe %d (tentative %d/%d)%s — %s",
+				"HEIC Uploads: failure on attachment %d (attempt %d/%d)%s — %s",
 				$row['attach_id'], $row['attempts'] + 1, Map::MAX_ATTEMPTS,
-				$definitive ? ', abandon' : '', $e->getMessage()
+				$definitive ? ', giving up' : '', $e->getMessage()
 			),
 			'heicuploads'
 		);

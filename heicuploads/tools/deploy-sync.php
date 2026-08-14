@@ -31,8 +31,8 @@ use IPS\Lang;
 $ecrire = ecritureDemandee( $argv );
 
 $ok   = fn( string $m ) => print( "  [OK]      {$m}\n" );
-$todo = fn( string $m ) => print( "  [A FAIRE] {$m}\n" );
-$warn = fn( string $m ) => print( "  [ATTENTION] {$m}\n" );
+$todo = fn( string $m ) => print( "  [TODO]    {$m}\n" );
+$warn = fn( string $m ) => print( "  [WARNING] {$m}\n" );
 $info = fn( string $m ) => print( "            {$m}\n" );
 
 $titre = function( int $n, string $t ) {
@@ -40,8 +40,8 @@ $titre = function( int $n, string $t ) {
 };
 
 printf( "%s\n", $ecrire
-	? "=== ÉCRITURE ==="
-	: "=== SIMULATION (ajoutez --write pour appliquer) ===" );
+	? "=== WRITING ==="
+	: "=== DRY RUN (add --write to apply) ===" );
 
 try
 {
@@ -49,8 +49,8 @@ try
 }
 catch( Throwable $e )
 {
-	fwrite( STDERR, "Application heicuploads introuvable en base : " . $e->getMessage() . "\n" );
-	fwrite( STDERR, "Ce script réconcilie une installation existante ; il ne remplace pas l'installation initiale.\n" );
+	fwrite( STDERR, "Application heicuploads not found in the database: " . $e->getMessage() . "\n" );
+	fwrite( STDERR, "This script reconciles an existing install; it does not replace the initial install.\n" );
 	exit( 1 );
 }
 
@@ -68,23 +68,23 @@ $longFichier = (int) array_key_last( $versions );
 
 $ligne = Db::i()->select( 'app_version, app_long_version', 'core_applications', array( 'app_directory=?', 'heicuploads' ) )->first();
 
-$info( sprintf( "en base   : %s (%d)", $ligne['app_version'], $ligne['app_long_version'] ) );
-$info( sprintf( "sur disque : %s (%d)", $versions[ (string) $longFichier ], $longFichier ) );
+$info( sprintf( "in database: %s (%d)", $ligne['app_version'], $ligne['app_long_version'] ) );
+$info( sprintf( "on disk    : %s (%d)", $versions[ (string) $longFichier ], $longFichier ) );
 
 if ( (int) $ligne['app_long_version'] === $longFichier )
 {
-	$ok( "Versions identiques — la synchronisation ne repose donc pas dessus." );
-	$info( "C'est justement pourquoi ce script existe : sans montée de version," );
-	$info( "le coeur ne relit jamais les manifestes de lui-même." );
+	$ok( "Versions identical — the sync does not rely on them anyway." );
+	$info( "That is precisely why this script exists: without a version bump," );
+	$info( "the core never re-reads the manifests on its own." );
 }
 else
 {
-	$info( "Versions différentes : installJsonData() alignera core_applications." );
+	$info( "Versions differ: installJsonData() will align core_applications." );
 }
 
 
 /* ------------------------------------------------------------------ */
-$titre( 2, "Schéma de la table de suivi" );
+$titre( 2, "Tracking table schema" );
 
 $schema = json_decode( file_get_contents( $chemin . '/data/schema.json' ), TRUE );
 
@@ -92,7 +92,7 @@ foreach ( $schema as $table => $definition )
 {
 	if ( !Db::i()->checkForTable( $table ) )
 	{
-		$todo( "Table {$table} ABSENTE — elle serait créée." );
+		$todo( "Table {$table} MISSING — it would be created." );
 		$manques++;
 		continue;
 	}
@@ -110,19 +110,19 @@ foreach ( $schema as $table => $definition )
 
 	if ( $absentes )
 	{
-		$todo( sprintf( "%s : colonne(s) manquante(s) — %s", $table, implode( ', ', $absentes ) ) );
-		$info( "Une colonne absente bloque toute la chaîne sur un INSERT." );
+		$todo( sprintf( "%s: missing column(s) — %s", $table, implode( ', ', $absentes ) ) );
+		$info( "A missing column breaks the whole chain on an INSERT." );
 		$manques += count( $absentes );
 	}
 	else
 	{
-		$ok( "{$table} : toutes les colonnes du manifeste sont présentes." );
+		$ok( "{$table}: every column of the manifest is present." );
 	}
 }
 
 
 /* ------------------------------------------------------------------ */
-$titre( 3, "Réglages" );
+$titre( 3, "Settings" );
 
 $reglages = json_decode( file_get_contents( $chemin . '/data/settings.json' ), TRUE );
 $attendus = array_column( $reglages, 'key' );
@@ -140,12 +140,12 @@ foreach ( $attendus as $cle )
 {
 	if ( !isset( $presents[ $cle ] ) )
 	{
-		$todo( "{$cle} — ABSENT, serait créé." );
+		$todo( "{$cle} — MISSING, would be created." );
 		$manques++;
 	}
 	elseif ( $presents[ $cle ]['conf_app'] !== 'heicuploads' )
 	{
-		$todo( sprintf( "%s — présent mais rattaché à « %s », serait rattaché à l'application.", $cle, $presents[ $cle ]['conf_app'] ?? 'aucune' ) );
+		$todo( sprintf( "%s — present but owned by \"%s\", would be reassigned to this application.", $cle, $presents[ $cle ]['conf_app'] ?? 'none' ) );
 		$manques++;
 	}
 	else
@@ -166,19 +166,19 @@ $aSupprimer = iterator_to_array( Db::i()->select(
 
 if ( $aSupprimer )
 {
-	$warn( "Réglage(s) en base mais absent(s) du manifeste — ils seraient SUPPRIMÉS :" );
+	$warn( "Setting(s) in the database but absent from the manifest — they would be DELETED:" );
 
 	foreach ( $aSupprimer as $cle )
 	{
 		$info( "  - " . $cle );
 	}
 
-	$info( "Si l'un d'eux compte, ajoutez-le à data/settings.json avant d'écrire." );
+	$info( "If any of them matters, add it to data/settings.json before writing." );
 }
 
 
 /* ------------------------------------------------------------------ */
-$titre( 4, "Module d'administration et tâche" );
+$titre( 4, "Admin module and task" );
 
 $modules = json_decode( file_get_contents( $chemin . '/data/modules.json' ), TRUE );
 
@@ -192,11 +192,11 @@ foreach ( $modules as $zone => $liste )
 
 		if ( $n )
 		{
-			$ok( "Module {$zone}/{$cle} présent." );
+			$ok( "Module {$zone}/{$cle} present." );
 		}
 		else
 		{
-			$todo( "Module {$zone}/{$cle} ABSENT — la page de réglages est injoignable. Serait créé." );
+			$todo( "Module {$zone}/{$cle} MISSING — the settings page is unreachable. Would be created." );
 			$manques++;
 		}
 	}
@@ -210,34 +210,34 @@ foreach ( $taches as $cle => $frequence )
 	{
 		$tache = Db::i()->select( '*', 'core_tasks', array( '`key`=?', $cle ) )->first();
 
-		$ok( sprintf( "Tâche %s présente (%s, %s, verrous %d)",
+		$ok( sprintf( "Task %s present (%s, %s, %d lock(s))",
 			$cle,
 			$tache['frequency'],
-			$tache['enabled'] ? 'activée' : 'DÉSACTIVÉE',
+			$tache['enabled'] ? 'enabled' : 'DISABLED',
 			$tache['lock_count'] ) );
 
 		if ( $tache['frequency'] !== $frequence or !$tache['enabled'] or $tache['lock_count'] >= 3 )
 		{
-			$info( "installTasks() fait un REPLACE : la ligne sera remise à neuf" );
-			$info( "(fréquence du manifeste, réactivée, verrous et dernier run remis à zéro)." );
+			$info( "installTasks() issues a REPLACE: the row will be recreated" );
+			$info( "(manifest frequency, re-enabled, locks and last run reset)." );
 		}
 	}
 	catch( Throwable $e )
 	{
-		$todo( "Tâche {$cle} ABSENTE — rien ne détecterait les HEIC. Serait créée." );
+		$todo( "Task {$cle} MISSING — nothing would detect HEIC files. Would be created." );
 		$manques++;
 	}
 }
 
 
 /* ------------------------------------------------------------------ */
-$titre( 5, "Mots de langue" );
+$titre( 5, "Language words" );
 
 $xml = @simplexml_load_file( $chemin . '/data/lang.xml' );
 
 if ( !$xml )
 {
-	$warn( "data/lang.xml illisible." );
+	$warn( "data/lang.xml is unreadable." );
 }
 else
 {
@@ -248,7 +248,7 @@ else
 		$cles[] = (string) $mot['key'];
 	}
 
-	$info( sprintf( "%d clé(s) dans data/lang.xml.", count( $cles ) ) );
+	$info( sprintf( "%d key(s) in data/lang.xml.", count( $cles ) ) );
 
 	foreach ( Lang::languages() as $langId => $langue )
 	{
@@ -262,7 +262,7 @@ else
 
 		if ( $absentes )
 		{
-			$todo( sprintf( "%s (id=%d) : %d mot(s) manquant(s) sur %d.", $langue->title, $langId, count( $absentes ), count( $cles ) ) );
+			$todo( sprintf( "%s (id=%d): %d word(s) missing out of %d.", $langue->title, $langId, count( $absentes ), count( $cles ) ) );
 
 			foreach ( array_slice( $absentes, 0, 5 ) as $cle )
 			{
@@ -271,14 +271,14 @@ else
 
 			if ( count( $absentes ) > 5 )
 			{
-				$info( sprintf( "  … et %d autre(s).", count( $absentes ) - 5 ) );
+				$info( sprintf( "  … and %d more.", count( $absentes ) - 5 ) );
 			}
 
 			$manques += count( $absentes );
 		}
 		else
 		{
-			$ok( sprintf( "%s (id=%d) : complète.", $langue->title, $langId ) );
+			$ok( sprintf( "%s (id=%d): complete.", $langue->title, $langId ) );
 		}
 	}
 }
@@ -289,26 +289,26 @@ else
 if ( !$ecrire )
 {
 	printf( "\n%s\n", $manques
-		? "{$manques} élément(s) à créer. Relancez avec --write pour appliquer."
-		: "Rien à faire : la base correspond déjà au manifeste." );
+		? "{$manques} item(s) to create. Run again with --write to apply."
+		: "Nothing to do: the database already matches the manifest." );
 	exit( 0 );
 }
 
-$titre( 6, "Application des changements" );
+$titre( 6, "Applying the changes" );
 
 /* Le schéma d'abord : une colonne manquante ferait échouer tout le reste. */
 $app->installDatabaseSchema();
-$ok( "installDatabaseSchema() — table et colonnes manquantes ajoutées." );
+$ok( "installDatabaseSchema() — missing table and columns added." );
 
 /* Modules, tâches, réglages, version, cache des applications. */
 $app->installJsonData();
-$ok( "installJsonData() — modules, tâches, réglages." );
+$ok( "installJsonData() — modules, tasks, settings." );
 
 /* Les mots ensuite : word_custom n'est pas dans le jeu de colonnes inséré,
    l'ON DUPLICATE KEY UPDATE ne l'écrase donc pas (Db.php:1002-1005). Une
    traduction déjà appliquée survit. */
 $inseres = $app->installLanguages();
-$ok( sprintf( "installLanguages() — %d mot(s) parcouru(s).", $inseres ) );
+$ok( sprintf( "installLanguages() — %d word(s) processed.", $inseres ) );
 
 /* installJsonData() vide déjà Store::i()->applications, et installSettings()
    le cache des réglages. Restent les modules — installModules() pose
@@ -317,10 +317,10 @@ $ok( sprintf( "installLanguages() — %d mot(s) parcouru(s).", $inseres ) );
    et les langues, qu'installLanguages() ne purge pas. */
 unset( Store::i()->modules );
 unset( Store::i()->languages );
-$ok( "Caches des modules et des langues vidés." );
+$ok( "Module and language caches cleared." );
 
-print( "\nTerminé.\n" );
-print( "Étape suivante : appliquer la traduction française, maintenant que les\n" );
-print( "mots existent en base :\n" );
+print( "\nDone.\n" );
+print( "Next step: apply a translation, now that the words exist in the\n" );
+print( "database:\n" );
 print( "  php applications/heicuploads/tools/import-lang.php\n" );
 print( "  php applications/heicuploads/tools/import-lang.php french <id> --write\n" );

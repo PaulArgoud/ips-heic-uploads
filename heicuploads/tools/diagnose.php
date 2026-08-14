@@ -17,7 +17,7 @@ use IPS\heicuploads\Map;
 use IPS\Settings;
 
 $ok   = fn( string $m ) => print( "  [OK]      {$m}\n" );
-$ko   = fn( string $m ) => print( "  [BLOQUE]  {$m}\n" );
+$ko   = fn( string $m ) => print( "  [BLOCKED] {$m}\n" );
 $info = fn( string $m ) => print( "            {$m}\n" );
 
 $titre = function( int $n, string $t ) {
@@ -26,14 +26,14 @@ $titre = function( int $n, string $t ) {
 
 
 /* ------------------------------------------------------------------ */
-$titre( 1, "L'application est-elle active et le réglage activé ?" );
+$titre( 1, "Is the application enabled, and the setting on?" );
 
 try
 {
 	$enabled = Settings::i()->heicuploads_enabled;
-	$enabled ? $ok( "heicuploads_enabled = 1" ) : $ko( "heicuploads_enabled = 0 — la tâche sort immédiatement." );
+	$enabled ? $ok( "heicuploads_enabled = 1" ) : $ko( "heicuploads_enabled = 0 — the task exits immediately." );
 
-	$info( sprintf( "qualité %s, vignette %s, filtre %s, vitesse %s, threads %s",
+	$info( sprintf( "quality %s, thumbnail %s, filter %s, speed %s, threads %s",
 		Settings::i()->heicuploads_quality,
 		Settings::i()->heicuploads_thumb_quality,
 		Settings::i()->heicuploads_filter,
@@ -46,23 +46,23 @@ try
 	$baseline = HeicUploadsApplication::baseline();
 
 	$baseline === NULL
-		? $ko( "Repère de départ NON POSÉ — la détection est suspendue, rien ne sera converti. Réinstallez l'application pour le poser." )
-		: $ok( "Repère de départ : attach_id {$baseline}. Rien d'antérieur ne sera converti." );
+		? $ko( "Baseline NOT SET — detection is suspended, nothing will be converted. Reinstall the application to set it." )
+		: $ok( "Baseline: attach_id {$baseline}. Nothing older will ever be converted." );
 }
 catch( Throwable $e )
 {
-	$ko( "Réglages absents : " . $e->getMessage() );
+	$ko( "Settings missing: " . $e->getMessage() );
 }
 
 
 /* ------------------------------------------------------------------ */
-$titre( 2, "Le serveur sait-il convertir ?" );
+$titre( 2, "Can this server convert?" );
 
 $problems = Converter::diagnose();
 
 if ( Converter::isOperational( $problems ) )
 {
-	$ok( "diagnose() ne signale aucun blocage." );
+	$ok( "diagnose() reports no blocking problem." );
 }
 else
 {
@@ -78,7 +78,7 @@ else
 
 
 /* ------------------------------------------------------------------ */
-$titre( 3, "Y a-t-il des pièces jointes HEIC en base ?" );
+$titre( 3, "Are there HEIC attachments in the database?" );
 
 try
 {
@@ -86,7 +86,7 @@ try
 
 	if ( $total )
 	{
-		$ok( "{$total} pièce(s) jointe(s) avec attach_ext heic/heif." );
+		$ok( "{$total} attachment(s) with attach_ext heic/heif." );
 
 		foreach ( Db::i()->select( '*', 'core_attachments', array( Db::i()->in( 'attach_ext', Converter::SOURCE_EXTENSIONS ) ), 'attach_id DESC', array( 0, 3 ) ) as $a )
 		{
@@ -97,51 +97,51 @@ try
 	}
 	else
 	{
-		$ko( "Aucune ligne core_attachments en heic/heif." );
-		$info( "Le fichier a peut-être été téléversé sans être rattaché à un message." );
+		$ko( "No core_attachments row with heic/heif." );
+		$info( "The file may have been uploaded without being attached to a post." );
 
 		$temp = Db::i()->select( 'COUNT(*)', 'core_files_temp' )->first();
-		$info( "core_files_temp contient {$temp} ligne(s) — un envoi jamais validé y resterait." );
+		$info( "core_files_temp holds {$temp} row(s) — an upload never submitted would sit there." );
 	}
 }
 catch( Throwable $e )
 {
-	$ko( "Lecture de core_attachments impossible : " . $e->getMessage() );
+	$ko( "Cannot read core_attachments: " . $e->getMessage() );
 }
 
 
 /* ------------------------------------------------------------------ */
-$titre( 4, "La tâche de détection est-elle installée et exécutée ?" );
+$titre( 4, "Is the detection task installed and running?" );
 
 try
 {
 	$task = Db::i()->select( '*', 'core_tasks', array( '`key`=?', 'scanHeic' ) )->first();
 
-	$task['enabled'] ? $ok( "Tâche scanHeic présente et activée." ) : $ko( "Tâche scanHeic présente mais DÉSACTIVÉE." );
+	$task['enabled'] ? $ok( "Task scanHeic present and enabled." ) : $ko( "Task scanHeic present but DISABLED." );
 
-	$info( "fréquence   : " . $task['frequency'] );
-	$info( "dernier run : " . ( $task['last_run'] ? date( 'Y-m-d H:i:s', $task['last_run'] ) : 'JAMAIS' ) );
-	$info( "prochain    : " . date( 'Y-m-d H:i:s', $task['next_run'] ) );
-	$info( "verrous     : " . $task['lock_count'] . ( $task['lock_count'] >= 3 ? "  ← bloquée, IPS l'a mise de côté" : '' ) );
+	$info( "frequency : " . $task['frequency'] );
+	$info( "last run  : " . ( $task['last_run'] ? date( 'Y-m-d H:i:s', $task['last_run'] ) : 'NEVER' ) );
+	$info( "next run  : " . date( 'Y-m-d H:i:s', $task['next_run'] ) );
+	$info( "locks     : " . $task['lock_count'] . ( $task['lock_count'] >= 3 ? "  <- stuck, IPS has set it aside" : '' ) );
 
 	if ( !$task['last_run'] )
 	{
-		$info( "Une tâche jamais lancée signifie que le cron n'appelle pas IPS," );
-		$info( "ou que le déclenchement par le trafic n'a pas encore eu lieu." );
+		$info( "A task that never ran means either the cron is not calling IPS," );
+		$info( "or traffic has not triggered it yet. A deploy-sync also resets this." );
 	}
 }
 catch( UnderflowException $e )
 {
-	$ko( "La tâche scanHeic n'est PAS dans core_tasks — data/tasks.json n'a pas été pris en compte." );
+	$ko( "Task scanHeic is NOT in core_tasks — data/tasks.json was not applied." );
 }
 catch( Throwable $e )
 {
-	$ko( "Lecture de core_tasks impossible : " . $e->getMessage() );
+	$ko( "Cannot read core_tasks: " . $e->getMessage() );
 }
 
 
 /* ------------------------------------------------------------------ */
-$titre( 5, "La table de suivi et la file d'attente" );
+$titre( 5, "The tracking table and the queue" );
 
 try
 {
@@ -151,7 +151,7 @@ try
 	{
 		foreach ( $counts as $statut => $total )
 		{
-			$ok( "heicuploads_map : {$total} en « {$statut} »" );
+			$ok( "heicuploads_map: {$total} in \"{$statut}\"" );
 		}
 
 		/* Les lignes bloquées ne se lisent pas dans le seul compteur d'échecs :
@@ -159,22 +159,22 @@ try
 		   tâche la ferme. */
 		if ( $blocked = Map::countBlocked() )
 		{
-			$info( "{$blocked} ligne(s) bloquée(s), relançables depuis l'AdminCP." );
+			$info( "{$blocked} blocked row(s), retryable from the AdminCP." );
 		}
 
 		foreach ( Map::recentFailures() as $f )
 		{
-			$info( "échec attach_id={$f['attach_id']} après {$f['attempts']} tentative(s) : " . $f['error_message'] );
+			$info( "failed attach_id={$f['attach_id']} after {$f['attempts']} attempt(s): " . $f['error_message'] );
 		}
 	}
 	else
 	{
-		$ko( "heicuploads_map est VIDE — la tâche n'a jamais rien détecté." );
+		$ko( "heicuploads_map is EMPTY — the task never detected anything." );
 	}
 }
 catch( Throwable $e )
 {
-	$ko( "Table heicuploads_map absente ou illisible : " . $e->getMessage() );
+	$ko( "Table heicuploads_map missing or unreadable: " . $e->getMessage() );
 }
 
 try
@@ -185,23 +185,23 @@ try
 	{
 		foreach ( $queue as $q )
 		{
-			$ok( "File : clé={$q['key']} offset={$q['offset']} données=" . $q['data'] );
+			$ok( "Queue: key={$q['key']} offset={$q['offset']} data=" . $q['data'] );
 		}
 	}
 	else
 	{
-		$info( "Aucun élément dans core_queue pour heicuploads." );
-		$info( "Normal si tout est converti, anormal s'il reste des « pending »." );
+		$info( "No core_queue item for heicuploads." );
+		$info( "Normal if everything is converted, abnormal if any row is pending." );
 	}
 }
 catch( Throwable $e )
 {
-	$ko( "Lecture de core_queue impossible : " . $e->getMessage() );
+	$ko( "Cannot read core_queue: " . $e->getMessage() );
 }
 
 
 /* ------------------------------------------------------------------ */
-$titre( 6, "Journaux de l'application" );
+$titre( 6, "Application logs" );
 
 try
 {
@@ -222,12 +222,12 @@ try
 	}
 	else
 	{
-		$info( "Aucune entrée — ni erreur, ni avertissement." );
+		$info( "No entry — neither error nor warning." );
 	}
 }
 catch( Throwable $e )
 {
-	$ko( "Lecture de core_log impossible : " . $e->getMessage() );
+	$ko( "Cannot read core_log: " . $e->getMessage() );
 }
 
 print( "\n" );

@@ -419,7 +419,7 @@ class Map
 
 		Db::i()->update( static::TABLE, array(
 			'status'        => static::FAILED,
-			'error_message' => 'Conversion interrompue avant son terme (processus arrêté), plafond de ' . static::MAX_ATTEMPTS . ' tentatives atteint.',
+			'error_message' => 'Conversion interrupted before completion (process stopped); the cap of ' . static::MAX_ATTEMPTS . ' attempts was reached.',
 			'updated'       => time(),
 		), $condition );
 

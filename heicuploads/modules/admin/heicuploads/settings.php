@@ -244,8 +244,8 @@ class settings extends Controller
 		{
 			$problems = array( array(
 				'blocking' => TRUE,
-				'what'     => "Le diagnostic a échoué : " . $e->getMessage(),
-				'fix'      => "Vérifier l'installation d'ImageMagick.",
+				'what'     => "Diagnostics failed: " . $e->getMessage(),
+				'fix'      => "Check the ImageMagick installation.",
 			) );
 		}
 

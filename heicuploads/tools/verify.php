@@ -18,9 +18,9 @@ use IPS\heicuploads\Converter;
 use IPS\heicuploads\Map;
 
 $limit = (int) ( $argv[1] ?? 10 );
-$ko    = fn( int $b ) => sprintf( '%d Ko', round( $b / 1024 ) );
+$ko    = fn( int $b ) => sprintf( '%d KB', round( $b / 1024 ) );
 
-printf( "=== %d dernières conversions ===\n\n", $limit );
+printf( "=== last %d conversions ===\n\n", $limit );
 
 $problemes = 0;
 
@@ -34,14 +34,14 @@ foreach ( Map::converted( $limit, 'updated DESC' ) as $row )
 	}
 	catch( Throwable $e )
 	{
-		printf( "  ANOMALIE : la pièce jointe n'existe plus en base\n\n" );
+		printf( "  PROBLEM: the attachment no longer exists in the database\n\n" );
 		$problemes++;
 		continue;
 	}
 
-	printf( "  nom       : %s  (ext en base : %s)\n", $a['attach_file'], $a['attach_ext'] );
-	printf( "  image ?   : %s\n", $a['attach_is_image'] ? 'oui' : 'NON — s\'affichera en lien de téléchargement' );
-	printf( "  dimensions: %dx%d  vignette %dx%d\n",
+	printf( "  name      : %s  (ext in database: %s)\n", $a['attach_file'], $a['attach_ext'] );
+	printf( "  image?    : %s\n", $a['attach_is_image'] ? 'yes' : 'NO — will show as a download link' );
+	printf( "  dimensions: %dx%d  thumbnail %dx%d\n",
 		$a['attach_img_width'], $a['attach_img_height'],
 		$a['attach_thumb_width'], $a['attach_thumb_height'] );
 
@@ -51,11 +51,11 @@ foreach ( Map::converted( $limit, 'updated DESC' ) as $row )
 	}
 
 	/* Les deux fichiers sont-ils réellement là, et lisibles ? */
-	foreach ( array( 'attach_location' => 'AVIF', 'attach_thumb_location' => 'vignette' ) as $col => $libelle )
+	foreach ( array( 'attach_location' => 'AVIF', 'attach_thumb_location' => 'thumbnail' ) as $col => $libelle )
 	{
 		if ( !$a[ $col ] )
 		{
-			printf( "  %-9s : ABSENT de la base\n", $libelle );
+			printf( "  %-9s : MISSING from the database\n", $libelle );
 			$problemes++;
 			continue;
 		}
@@ -78,8 +78,8 @@ foreach ( Map::converted( $limit, 'updated DESC' ) as $row )
 			printf( "  %-9s : %s  signature %s  getimagesize %s\n",
 				$libelle,
 				$ko( $size ),
-				$conforme ? 'OK' : 'NON CONFORME',
-				$gis ? "{$gis[0]}x{$gis[1]}" : 'ÉCHEC' );
+				$conforme ? 'OK' : 'NON-COMPLIANT',
+				$gis ? "{$gis[0]}x{$gis[1]}" : 'FAILED' );
 
 			if ( !$conforme or !$gis )
 			{
@@ -88,7 +88,7 @@ foreach ( Map::converted( $limit, 'updated DESC' ) as $row )
 		}
 		catch( Throwable $e )
 		{
-			printf( "  %-9s : ILLISIBLE — %s\n", $libelle, $e->getMessage() );
+			printf( "  %-9s : UNREADABLE — %s\n", $libelle, $e->getMessage() );
 			$problemes++;
 		}
 	}
@@ -101,22 +101,22 @@ foreach ( Map::converted( $limit, 'updated DESC' ) as $row )
 
 		if ( !$maps )
 		{
-			printf( "  message   : aucune ligne core_attachments_map (pièce jointe orpheline)\n" );
+			printf( "  post      : no core_attachments_map row (orphaned attachment)\n" );
 		}
 
 		foreach ( $maps as $m )
 		{
-			printf( "  message   : %s id1=%s id2=%s\n", $m['location_key'], $m['id1'], $m['id2'] );
+			printf( "  post      : %s id1=%s id2=%s\n", $m['location_key'], $m['id1'], $m['id2'] );
 		}
 	}
 	catch( Throwable $e )
 	{
-		printf( "  message   : lecture impossible — %s\n", $e->getMessage() );
+		printf( "  post      : cannot read — %s\n", $e->getMessage() );
 	}
 
 	print( "\n" );
 }
 
 printf( "%s\n", $problemes
-	? "{$problemes} anomalie(s) relevée(s) — NE PAS laisser les conversions restantes se poursuivre."
-	: "Aucune anomalie sur cet échantillon." );
+	? "{$problemes} problem(s) found — do NOT let the remaining conversions continue."
+	: "No problem found in this sample." );

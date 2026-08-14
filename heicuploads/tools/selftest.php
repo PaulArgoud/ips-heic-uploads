@@ -32,35 +32,35 @@ require __DIR__ . '/../sources/Converter/Converter.php';
 
 use IPS\heicuploads\Converter;
 
-$ko = fn( int $bytes ) : string => sprintf( '%.0f Ko', $bytes / 1024 );
+$ko = fn( int $bytes ) : string => sprintf( '%.0f KB', $bytes / 1024 );
 
 
 /* ------------------------------------------------------------------ */
 /* 1. Diagnostic de l'environnement                                    */
 /* ------------------------------------------------------------------ */
 
-echo "=== Diagnostic ===\n";
+echo "=== Diagnostics ===\n";
 
 $problems = Converter::diagnose();
 
 if ( !$problems )
 {
-	echo "  Aucun problème. Le serveur peut convertir.\n";
+	echo "  No problem. This server can convert.\n";
 }
 
 foreach ( $problems as $problem )
 {
 	printf( "  [%s] %s\n         → %s\n",
-		$problem['blocking'] ? 'BLOQUANT' : 'avertissement',
+		$problem['blocking'] ? 'BLOCKING' : 'warning',
 		$problem['what'],
 		$problem['fix'] );
 }
 
-printf( "\n  Opérationnel : %s\n\n", Converter::isOperational( $problems ) ? 'OUI' : 'NON' );
+printf( "\n  Operational: %s\n\n", Converter::isOperational( $problems ) ? 'YES' : 'NO' );
 
 if ( !Converter::isOperational( $problems ) )
 {
-	fwrite( STDERR, "Environnement inutilisable, conversion non tentée.\n" );
+	fwrite( STDERR, "Unusable environment, conversion not attempted.\n" );
 	exit( 1 );
 }
 
@@ -73,7 +73,7 @@ $sources = array_slice( $argv, 1 );
 
 if ( !$sources )
 {
-	echo "Aucun fichier à convertir. Usage : php tools/selftest.php photo.heic\n";
+	echo "No file to convert. Usage: php tools/selftest.php photo.heic\n";
 	exit( 0 );
 }
 
@@ -86,7 +86,7 @@ foreach ( $sources as $source )
 
 	if ( !Converter::isSource( $source ) )
 	{
-		printf( "  ignoré : ce n'est pas un HEIC/HEIF\n\n" );
+		printf( "  skipped: not a HEIC/HEIF file\n\n" );
 		continue;
 	}
 
@@ -104,25 +104,25 @@ foreach ( $sources as $source )
 		printf( "  AVIF     : %s  %dx%d  %.2f s  (source %s)\n",
 			$ko( $stats['filesize'] ), $stats['width'], $stats['height'],
 			$result['duration'], $ko( filesize( $source ) ) );
-		printf( "  Signature: %s\n", Converter::hasAvifSignature( $avif ) ? 'ftypavif — conforme' : 'NON CONFORME' );
+		printf( "  Signature: %s\n", Converter::hasAvifSignature( $avif ) ? 'ftypavif — compliant' : 'NON-COMPLIANT' );
 
 		/* Second portail, indépendant de la signature : c'est getimagesize()
 		   qui décide de attach_is_image dans \IPS\File. */
 		$gis = @getimagesize( $avif );
-		printf( "  getimagesize : %s\n", $gis ? "{$gis[0]}x{$gis[1]}, type {$gis[2]}" : 'ÉCHEC' );
+		printf( "  getimagesize : %s\n", $gis ? "{$gis[0]}x{$gis[1]}, type {$gis[2]}" : 'FAILED' );
 
-		printf( "  Vignette : %s  %dx%d  (%s)\n",
+		printf( "  Thumbnail: %s  %dx%d  (%s)\n",
 			$ko( $thumb['filesize'] ), $thumb['width'], $thumb['height'], $thumb['format'] );
 
-		printf( "  Gain     : %.1f%% du poids d'origine\n\n",
+		printf( "  Ratio    : %.1f%% of the original size\n\n",
 			$stats['filesize'] / filesize( $source ) * 100 );
 	}
 	catch ( Throwable $e )
 	{
 		$echecs++;
-		printf( "  ÉCHEC : %s\n\n", $e->getMessage() );
+		printf( "  FAILED: %s\n\n", $e->getMessage() );
 	}
 }
 
-printf( "%d fichier(s), %d échec(s).\n", count( $sources ), $echecs );
+printf( "%d file(s), %d failure(s).\n", count( $sources ), $echecs );
 exit( $echecs ? 1 : 0 );

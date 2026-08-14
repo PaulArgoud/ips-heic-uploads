@@ -22,21 +22,21 @@ $ecrire  = ecritureDemandee( $argv );
 /* Sans argument : on montre les langues du forum et les traductions dispo. */
 if ( !$fichier or !$langId )
 {
-	print( "Langues installées :\n" );
+	print( "Installed languages:\n" );
 
 	foreach ( Db::i()->select( '*', 'core_sys_lang' ) as $l )
 	{
-		printf( "  id=%-3d %-30s %s\n", $l['lang_id'], $l['lang_title'], $l['lang_default'] ? '(par défaut)' : '' );
+		printf( "  id=%-3d %-30s %s\n", $l['lang_id'], $l['lang_title'], $l['lang_default'] ? '(default)' : '' );
 	}
 
-	print( "\nTraductions disponibles :\n" );
+	print( "\nAvailable translations:\n" );
 
 	foreach ( glob( __DIR__ . '/../translations/*.xml' ) as $f )
 	{
 		printf( "  %s\n", basename( $f, '.xml' ) );
 	}
 
-	printf( "\nExemple : php %s french 2 --write\n", 'applications/heicuploads/tools/import-lang.php' );
+	printf( "\nExample: php %s french 2 --write\n", 'applications/heicuploads/tools/import-lang.php' );
 	exit( 0 );
 }
 
@@ -44,7 +44,7 @@ $chemin = __DIR__ . '/../translations/' . basename( $fichier, '.xml' ) . '.xml';
 
 if ( !is_file( $chemin ) )
 {
-	fwrite( STDERR, "Traduction introuvable : {$chemin}\n" );
+	fwrite( STDERR, "Translation not found: {$chemin}\n" );
 	exit( 1 );
 }
 
@@ -52,7 +52,7 @@ $xml = @simplexml_load_file( $chemin );
 
 if ( !$xml )
 {
-	fwrite( STDERR, "XML illisible : {$chemin}\n" );
+	fwrite( STDERR, "Unreadable XML: {$chemin}\n" );
 	exit( 1 );
 }
 
@@ -62,12 +62,12 @@ try
 }
 catch( Throwable $e )
 {
-	fwrite( STDERR, "Aucune langue avec l'identifiant {$langId}.\n" );
+	fwrite( STDERR, "No language with id {$langId}.\n" );
 	exit( 1 );
 }
 
 printf( "%s\n%s → %s\n\n",
-	$ecrire ? "=== ÉCRITURE ===" : "=== SIMULATION (ajoutez --write pour appliquer) ===",
+	$ecrire ? "=== WRITING ===" : "=== DRY RUN (add --write to apply) ===",
 	basename( $chemin ),
 	$langue['lang_title'] );
 
@@ -94,18 +94,18 @@ foreach ( $xml->app->word as $mot )
 	}
 	else
 	{
-		printf( "  ABSENTE de la base : %s\n", $cle );
+		printf( "  MISSING from the database: %s\n", $cle );
 		$absent++;
 	}
 }
 
-printf( "\n%d chaîne(s) %s, %d absente(s) de la base.\n",
+printf( "\n%d string(s) %s, %d missing from the database.\n",
 	$applique,
-	$ecrire ? 'appliquée(s)' : 'trouvée(s)',
+	$ecrire ? 'applied' : 'found',
 	$absent );
 
 if ( $ecrire )
 {
 	unset( \IPS\Data\Store::i()->languages );
-	print( "Cache des langues vidé.\n" );
+	print( "Language cache cleared.\n" );
 }

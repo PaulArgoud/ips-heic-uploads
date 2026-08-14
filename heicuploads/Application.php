@@ -54,7 +54,7 @@ class Application extends SystemApplication
 		{
 			if ( !$problem['blocking'] )
 			{
-				Log::log( "HEIC vers AVIF — avertissement : {$problem['what']} {$problem['fix']}", 'heicuploads_install' );
+				Log::log( "HEIC Uploads — warning: {$problem['what']} {$problem['fix']}", 'heicuploads_install' );
 			}
 		}
 
@@ -68,14 +68,14 @@ class Application extends SystemApplication
 			return;
 		}
 
-		$message = "L'application « HEIC vers AVIF » ne peut pas fonctionner sur ce serveur.\n\n";
+		$message = "The \"HEIC Uploads\" application cannot run on this server.\n\n";
 
 		foreach ( $blocking as $i => $problem )
 		{
 			$message .= sprintf( "%d. %s\n   → %s\n", $i + 1, $problem['what'], $problem['fix'] );
 		}
 
-		$message .= "\nCorrigez ces points puis relancez l'installation.";
+		$message .= "\nFix these points, then run the installation again.";
 
 		Log::log( $message, 'heicuploads_install' );
 
@@ -112,7 +112,7 @@ class Application extends SystemApplication
 		if ( ( $existing = static::baseline() ) !== NULL )
 		{
 			Log::log(
-				"HEIC Uploads : repère de départ déjà posé à attach_id {$existing}, conservé tel quel.",
+				"HEIC Uploads: baseline already set at attach_id {$existing}, left untouched.",
 				'heicuploads_install'
 			);
 
@@ -125,7 +125,7 @@ class Application extends SystemApplication
 
 			Settings::i()->changeValues( array( 'heicuploads_baseline_id' => $max ) );
 
-			Log::log( "HEIC Uploads : repère de départ posé à attach_id {$max}. Les pièces jointes antérieures ne seront pas converties.", 'heicuploads_install' );
+			Log::log( "HEIC Uploads: baseline set at attach_id {$max}. Older attachments will never be converted.", 'heicuploads_install' );
 		}
 		catch( Throwable $e )
 		{
@@ -133,7 +133,7 @@ class Application extends SystemApplication
 			   plutôt que de laisser filer une conversion rétroactive
 			   silencieuse. */
 			throw new RuntimeException(
-				"Impossible de déterminer le point de départ du balayage : " . $e->getMessage()
+				"Cannot determine the scan baseline: " . $e->getMessage()
 			);
 		}
 	}

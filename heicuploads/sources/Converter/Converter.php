@@ -175,8 +175,8 @@ class Converter
 		{
 			return array( array(
 				'blocking' => TRUE,
-				'what'     => "L'extension PHP imagick n'est pas chargée.",
-				'fix'      => "Installer l'extension imagick pour PHP, puis redémarrer PHP-FPM.",
+				'what'     => "The PHP imagick extension is not loaded.",
+				'fix'      => "Install the imagick extension for PHP, then restart PHP-FPM.",
 			) );
 		}
 
@@ -189,8 +189,8 @@ class Converter
 		{
 			$problems[] = array(
 				'blocking' => TRUE,
-				'what'     => "ImageMagick ne sait pas décoder le HEIC : le format est absent de queryFormats().",
-				'fix'      => "Recompiler ImageMagick avec le délégué libheif, puis redémarrer PHP-FPM.",
+				'what'     => "ImageMagick cannot decode HEIC: the format is absent from queryFormats().",
+				'fix'      => "Rebuild ImageMagick with the libheif delegate, then restart PHP-FPM.",
 			);
 		}
 
@@ -199,8 +199,8 @@ class Converter
 		{
 			$problems[] = array(
 				'blocking' => TRUE,
-				'what'     => "ImageMagick ne sait pas encoder l'AVIF : le format est absent de queryFormats().",
-				'fix'      => "Recompiler ImageMagick avec le délégué AVIF (libaom ou libavif).",
+				'what'     => "ImageMagick cannot encode AVIF: the format is absent from queryFormats().",
+				'fix'      => "Rebuild ImageMagick with an AVIF delegate (libaom or libavif).",
 			);
 		}
 
@@ -211,8 +211,8 @@ class Converter
 		{
 			$problems[] = array(
 				'blocking' => TRUE,
-				'what'     => "PHP ne connaît pas IMAGETYPE_AVIF : getimagesize() ne reconnaîtra pas les fichiers produits, qui s'afficheront en liens de téléchargement.",
-				'fix'      => "PHP 8.1 ou supérieur est requis. Version actuelle : " . PHP_VERSION . ".",
+				'what'     => "PHP does not know IMAGETYPE_AVIF: getimagesize() will not recognise the files produced, and they will show as download links.",
+				'fix'      => "PHP 8.1 or later is required. Current version: " . PHP_VERSION . ".",
 			);
 		}
 
@@ -239,7 +239,7 @@ class Converter
 					$problems[] = array(
 						'blocking' => TRUE,
 						'what'     => "L'AVIF produit par ce serveur ne porte pas la marque « ftypavif » qu'Invision Community attend : les images converties ne seraient pas affichables.",
-						'fix'      => "Mettre à jour la bibliothèque AVIF d'ImageMagick.",
+						'fix'      => "Update ImageMagick's AVIF library.",
 					);
 				}
 			}
@@ -247,8 +247,8 @@ class Converter
 			{
 				$problems[] = array(
 					'blocking' => TRUE,
-					'what'     => "L'encodage AVIF de test a échoué : " . $e->getMessage(),
-					'fix'      => "Vérifier l'installation du délégué AVIF d'ImageMagick.",
+					'what'     => "The AVIF test encode failed: " . $e->getMessage(),
+					'fix'      => "Check the installation of ImageMagick's AVIF delegate.",
 				);
 			}
 			finally
@@ -446,7 +446,7 @@ class Converter
 	{
 		if ( !is_readable( $source ) )
 		{
-			throw new RuntimeException( "Source illisible : {$source}" );
+			throw new RuntimeException( "Unreadable source: {$source}" );
 		}
 
 		/* Refus AVANT qu'ImageMagick ne voie les octets : c'est le seul moment
@@ -455,7 +455,7 @@ class Converter
 
 		if ( $coder === NULL )
 		{
-			throw new RuntimeException( "Contenu non reconnu comme image : décodage refusé." );
+			throw new RuntimeException( "Content not recognised as an image: decoding refused." );
 		}
 
 		$started = microtime( TRUE );
@@ -537,7 +537,7 @@ class Converter
 				   distingue dans le journal « une photo trop grande » d'un
 				   fichier fabriqué pour faire tomber le processus. */
 				throw new RuntimeException( sprintf(
-					'Image refusée : %s pixels annoncés sur %d image(s), au-delà du plafond de %s.',
+					'Image refused: %s pixels declared across %d image(s), beyond the %s cap.',
 					number_format( $pixels, 0, ',', ' ' ),
 					$frames,
 					number_format( static::MAX_PIXELS, 0, ',', ' ' )
@@ -580,12 +580,12 @@ class Converter
 		catch ( ImagickException $e )
 		{
 			$this->release( $image );
-			throw new RuntimeException( "Échec Imagick : " . $e->getMessage(), 0, $e );
+			throw new RuntimeException( "Imagick failure: " . $e->getMessage(), 0, $e );
 		}
 		catch ( Throwable $e )
 		{
 			$this->release( $image );
-			throw new RuntimeException( "Échec de conversion : " . $e->getMessage(), 0, $e );
+			throw new RuntimeException( "Conversion failure: " . $e->getMessage(), 0, $e );
 		}
 
 		/* Un HEIC de 48 Mpx décompressé en Q16 occupe plusieurs centaines de
@@ -594,12 +594,12 @@ class Converter
 
 		if ( !is_file( $avifTarget ) or !filesize( $avifTarget ) )
 		{
-			throw new RuntimeException( "Aucun AVIF produit : {$avifTarget}" );
+			throw new RuntimeException( "No AVIF produced: {$avifTarget}" );
 		}
 
 		if ( !is_file( $thumbPath ) or !filesize( $thumbPath ) )
 		{
-			throw new RuntimeException( "Aucune vignette produite : {$thumbPath}" );
+			throw new RuntimeException( "No thumbnail produced: {$thumbPath}" );
 		}
 
 		/* Contrôle de la marque AVANT de déclarer la réussite : un AVIF non
@@ -609,7 +609,7 @@ class Converter
 		{
 			@unlink( $avifTarget );
 			@unlink( $thumbPath );
-			throw new RuntimeException( "L'AVIF produit ne porte pas la marque « ftypavif » attendue par \\IPS\\Image::create()." );
+			throw new RuntimeException( "The AVIF produced does not carry the \"ftypavif\" brand that \\IPS\\Image::create() requires." );
 		}
 
 		return array(

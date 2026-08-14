@@ -26,8 +26,8 @@ $root = realpath( __DIR__ . '/../../..' );
 
 if ( $root === FALSE or !is_file( $root . '/init.php' ) )
 {
-	fwrite( STDERR, "init.php introuvable depuis " . __DIR__ . ". Ces outils s'exécutent depuis la racine du forum :\n" );
-	fwrite( STDERR, "    php applications/heicuploads/tools/<outil>.php\n" );
+	fwrite( STDERR, "init.php not found from " . __DIR__ . ". These tools run from the forum root:\n" );
+	fwrite( STDERR, "    php applications/heicuploads/tools/<tool>.php\n" );
 	exit( 1 );
 }
 
@@ -35,7 +35,7 @@ require_once $root . '/init.php';
 
 if ( !defined( '\IPS\SUITE_UNIQUE_KEY' ) )
 {
-	fwrite( STDERR, "init.php n'a pas initialisé la suite. Installation incomplète ?\n" );
+	fwrite( STDERR, "init.php did not initialise the suite. Incomplete install?\n" );
 	exit( 1 );
 }
 

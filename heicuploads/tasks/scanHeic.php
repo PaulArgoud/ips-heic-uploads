@@ -102,7 +102,7 @@ class scanHeic extends Task
 			   Une ligne par minute y rendrait cette catégorie inutilisable.
 			   L'état ne dure que le temps de réinstaller, et l'AdminCP comme
 			   tools/diagnose.php le disent en toutes lettres. */
-			$messages[] = 'Repère de départ non posé : détection suspendue, aucune photo ne sera convertie. Réinstallez l\'application pour le poser.';
+			$messages[] = 'Baseline not set: detection suspended, no photo will be converted. Reinstall the application to set it.';
 
 			return $this->summarise( $messages );
 		}
@@ -174,7 +174,7 @@ class scanHeic extends Task
 			}
 			catch( Throwable $e )
 			{
-				Log::log( "HEIC vers AVIF : impossible d'enregistrer la pièce jointe {$attachId} — " . $e->getMessage(), 'heicuploads' );
+				Log::log( "HEIC Uploads: cannot record attachment {$attachId} — " . $e->getMessage(), 'heicuploads' );
 
 				/* On INTERROMPT le lot au lieu de poursuivre. Le repère du
 				   prochain passage est le plus grand attach_id ENREGISTRÉ :
@@ -187,7 +187,7 @@ class scanHeic extends Task
 			}
 		}
 
-		return $added ? array( "{$added} pièce(s) jointe(s) HEIC mise(s) en file de conversion" ) : array();
+		return $added ? array( "{$added} HEIC attachment(s) queued for conversion" ) : array();
 	}
 
 	/**
@@ -213,9 +213,9 @@ class scanHeic extends Task
 				return NULL;
 			}
 
-			$message = count( $abandoned ) . ' conversion(s) abandonnée(s) marquée(s) en échec : pièces jointes ' . implode( ', ', $abandoned );
+			$message = count( $abandoned ) . ' abandoned conversion(s) marked as failed: attachments ' . implode( ', ', $abandoned );
 
-			Log::log( 'HEIC vers AVIF : ' . $message, 'heicuploads' );
+			Log::log( 'HEIC Uploads: ' . $message, 'heicuploads' );
 
 			return $message;
 		}
@@ -223,7 +223,7 @@ class scanHeic extends Task
 		{
 			/* Un ménage impossible ne doit pas empêcher la détection : c'est
 			   la conversion des nouveaux envois qui compte. */
-			Log::log( "HEIC vers AVIF : fermeture des conversions abandonnées impossible — " . $e->getMessage(), 'heicuploads' );
+			Log::log( "HEIC Uploads: cannot close abandoned conversions — " . $e->getMessage(), 'heicuploads' );
 
 			return NULL;
 		}
@@ -276,7 +276,7 @@ class scanHeic extends Task
 		}
 		catch( Throwable $e )
 		{
-			Log::log( "HEIC vers AVIF : mise en file impossible — " . $e->getMessage(), 'heicuploads' );
+			Log::log( "HEIC Uploads: cannot queue — " . $e->getMessage(), 'heicuploads' );
 		}
 	}
 

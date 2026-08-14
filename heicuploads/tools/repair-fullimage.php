@@ -19,7 +19,7 @@ use IPS\heicuploads\Rewriter;
 
 $ecrire = ecritureDemandee( $argv );
 
-printf( "%s\n\n", $ecrire ? "=== ÉCRITURE ===" : "=== SIMULATION (ajoutez --write pour appliquer) ===" );
+printf( "%s\n\n", $ecrire ? "=== WRITING ===" : "=== DRY RUN (add --write to apply) ===" );
 
 $vus = $corriges = 0;
 
@@ -58,18 +58,18 @@ foreach ( Map::converted() as $conversion )
 				continue;
 			}
 
-			printf( "  %s #%s (pièce jointe %d)\n", $resultat['table'], $resultat['id'], $attachId );
+			printf( "  %s #%s (attachment %d)\n", $resultat['table'], $resultat['id'], $attachId );
 
 			$corriges++;
 		}
 		catch( Throwable $e )
 		{
-			printf( "  ANOMALIE pièce jointe %d : %s\n", $attachId, $e->getMessage() );
+			printf( "  PROBLEM on attachment %d: %s\n", $attachId, $e->getMessage() );
 		}
 	}
 }
 
-printf( "\n%d contenu(s) examiné(s), %d %s.\n",
+printf( "\n%d item(s) examined, %d %s.\n",
 	$vus,
 	$corriges,
-	$ecrire ? "corrigé(s)" : "à corriger" );
+	$ecrire ? "fixed" : "to fix" );

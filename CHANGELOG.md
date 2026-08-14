@@ -24,6 +24,20 @@ et le projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 - Le `README.md` passe en **anglais**. Le diagramme y est corrigé, pas seulement
   traduit : la suppression de l'original y partait en parallèle de la réécriture
   alors qu'elle la suit, et le contrôle de signature en entrée n'y figurait pas.
+- **Toute sortie vue par un administrateur passe en anglais** : les sept outils,
+  mais aussi les messages de `Converter::diagnose()` — que le bloc d'état de
+  l'AdminCP affiche tels quels —, le message d'échec d'installation, les causes
+  écrites en base pour les conversions abandonnées, et les entrées de journal.
+  Soit 74 chaînes. Un administrateur non francophone installant depuis GitHub
+  lisait jusqu'ici du français à l'écran.
+
+  `Converter::diagnose()` ne peut pas passer par des clés de langue : il est
+  appelé par `selftest.php`, qui ne charge délibérément aucune classe `\IPS` —
+  c'est ce qui permet d'éprouver le moteur avant même d'installer.
+
+  **Les commentaires du code restent en français.** Ils portent le raisonnement
+  et les citations du cœur, ils sont la documentation de conception du projet,
+  et les traduire ferait perdre en précision ce qu'on gagnerait en portée.
 
 ## [1.0.1] — 2026-08-14
 

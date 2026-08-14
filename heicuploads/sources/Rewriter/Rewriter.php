@@ -86,7 +86,7 @@ class Rewriter
 			catch( Throwable $e )
 			{
 				Log::log(
-					"HEIC vers AVIF : réécriture impossible pour la pièce jointe {$attachId} ({$map['location_key']}) — " . $e->getMessage(),
+					"HEIC Uploads: cannot rewrite attachment {$attachId} ({$map['location_key']}) — " . $e->getMessage(),
 					'heicuploads'
 				);
 			}
