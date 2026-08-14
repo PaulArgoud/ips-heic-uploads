@@ -123,10 +123,10 @@ Hence the procedure:
 php applications/heicuploads/tools/deploy-sync.php
 
 # 3. Apply
-php applications/heicuploads/tools/deploy-sync.php --ecrire
+php applications/heicuploads/tools/deploy-sync.php --write
 
 # 4. Re-apply the translation, now that the labels exist
-php applications/heicuploads/tools/import-lang.php french <id> --ecrire
+php applications/heicuploads/tools/import-lang.php french <id> --write
 
 # 5. Check the chain end to end
 php applications/heicuploads/tools/diagnose.php
@@ -174,7 +174,8 @@ php applications/heicuploads/tools/repair-fullimage.php      # repair older rewr
 ```
 
 The ones that change anything — `deploy-sync`, `import-lang`,
-`repair-fullimage` — **simulate by default** and only write with `--ecrire`.
+`repair-fullimage` — **simulate by default** and only write with `--write`
+(`--ecrire`, the original French flag, still works).
 
 `selftest.php` deserves a mention: the conversion engine depends on **no**
 `\IPS` class. You can replay a problematic file from the command line, with no
@@ -208,7 +209,7 @@ English _(default)_, French, Spanish, Simplified Chinese, Hindi.
 
 ```bash
 php applications/heicuploads/tools/import-lang.php           # lists the languages
-php applications/heicuploads/tools/import-lang.php french 2 --ecrire
+php applications/heicuploads/tools/import-lang.php french 2 --write
 ```
 
 ## Project status

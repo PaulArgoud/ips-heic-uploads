@@ -5,6 +5,26 @@ Toutes les modifications notables de **HEIC Uploads**.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Ajouté
+
+- Drapeau **`--write`** dans les trois outils qui écrivent (`deploy-sync`,
+  `import-lang`, `repair-fullimage`). `--ecrire` reste reconnu. Le dépôt est
+  public et sa documentation en anglais : un lecteur anglophone qui bute sur un
+  drapeau français obtient une simulation en croyant avoir écrit, ce qui est le
+  pire malentendu possible pour un outil qui modifie la base. La lecture du
+  drapeau vit dans `tools/_bootstrap.php`, pas recopiée dans chaque outil.
+- `build-release.sh` à la racine du dépôt — hors de l'application, pour ne pas
+  se retrouver dans l'archive livrée. Il fabrique le `.tar` d'installation
+  depuis une étiquette git et refuse de produire une archive non conforme.
+
+### Modifié
+
+- Le `README.md` passe en **anglais**. Le diagramme y est corrigé, pas seulement
+  traduit : la suppression de l'original y partait en parallèle de la réécriture
+  alors qu'elle la suit, et le contrôle de signature en entrée n'y figurait pas.
+
 ## [1.0.1] — 2026-08-14
 
 Version d'audit. Aucune fonction nouvelle côté membre : que des correctifs, une

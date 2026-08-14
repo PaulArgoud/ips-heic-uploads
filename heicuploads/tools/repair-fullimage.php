@@ -8,7 +8,7 @@
  *
  * À lancer depuis la RACINE du forum :
  *     php applications/heicuploads/tools/repair-fullimage.php          (simulation)
- *     php applications/heicuploads/tools/repair-fullimage.php --ecrire (applique)
+ *     php applications/heicuploads/tools/repair-fullimage.php --write   (applique)
  */
 
 require_once __DIR__ . '/_bootstrap.php';
@@ -17,9 +17,9 @@ use IPS\Db;
 use IPS\heicuploads\Map;
 use IPS\heicuploads\Rewriter;
 
-$ecrire = in_array( '--ecrire', $argv );
+$ecrire = ecritureDemandee( $argv );
 
-printf( "%s\n\n", $ecrire ? "=== ÉCRITURE ===" : "=== SIMULATION (ajoutez --ecrire pour appliquer) ===" );
+printf( "%s\n\n", $ecrire ? "=== ÉCRITURE ===" : "=== SIMULATION (ajoutez --write pour appliquer) ===" );
 
 $vus = $corriges = 0;
 
@@ -37,7 +37,7 @@ foreach ( Map::converted() as $conversion )
 			   sont empruntées au Rewriter, jamais recopiées : ce script en
 			   avait sa propre version, et les deux avaient déjà divergé. Le
 			   dernier argument fait la simulation — rien n'est écrit tant que
-			   --ecrire n'est pas passé. */
+			   --write n'est pas passé. */
 			$resultat = Rewriter::transform(
 				$map,
 				static fn( string $html ) : ?string => Rewriter::restoreDataFullImage( Rewriter::restoreEscapedTokens( $html ) ),

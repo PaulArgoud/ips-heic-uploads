@@ -18,7 +18,7 @@
  *
  * À lancer depuis la RACINE du forum :
  *     php applications/heicuploads/tools/deploy-sync.php          (simulation)
- *     php applications/heicuploads/tools/deploy-sync.php --ecrire (applique)
+ *     php applications/heicuploads/tools/deploy-sync.php --write   (applique)
  */
 
 require_once __DIR__ . '/_bootstrap.php';
@@ -28,7 +28,7 @@ use IPS\Data\Store;
 use IPS\Db;
 use IPS\Lang;
 
-$ecrire = in_array( '--ecrire', $argv );
+$ecrire = ecritureDemandee( $argv );
 
 $ok   = fn( string $m ) => print( "  [OK]      {$m}\n" );
 $todo = fn( string $m ) => print( "  [A FAIRE] {$m}\n" );
@@ -41,7 +41,7 @@ $titre = function( int $n, string $t ) {
 
 printf( "%s\n", $ecrire
 	? "=== ÉCRITURE ==="
-	: "=== SIMULATION (ajoutez --ecrire pour appliquer) ===" );
+	: "=== SIMULATION (ajoutez --write pour appliquer) ===" );
 
 try
 {
@@ -289,7 +289,7 @@ else
 if ( !$ecrire )
 {
 	printf( "\n%s\n", $manques
-		? "{$manques} élément(s) à créer. Relancez avec --ecrire pour appliquer."
+		? "{$manques} élément(s) à créer. Relancez avec --write pour appliquer."
 		: "Rien à faire : la base correspond déjà au manifeste." );
 	exit( 0 );
 }
@@ -323,4 +323,4 @@ print( "\nTerminé.\n" );
 print( "Étape suivante : appliquer la traduction française, maintenant que les\n" );
 print( "mots existent en base :\n" );
 print( "  php applications/heicuploads/tools/import-lang.php\n" );
-print( "  php applications/heicuploads/tools/import-lang.php french <id> --ecrire\n" );
+print( "  php applications/heicuploads/tools/import-lang.php french <id> --write\n" );

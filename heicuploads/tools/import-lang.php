@@ -8,7 +8,7 @@
  * À lancer depuis la RACINE du forum :
  *     php applications/heicuploads/tools/import-lang.php                 (liste les langues)
  *     php applications/heicuploads/tools/import-lang.php french 2        (simulation)
- *     php applications/heicuploads/tools/import-lang.php french 2 --ecrire
+ *     php applications/heicuploads/tools/import-lang.php french 2 --write
  */
 
 require_once __DIR__ . '/_bootstrap.php';
@@ -17,7 +17,7 @@ use IPS\Db;
 
 $fichier = $argv[1] ?? NULL;
 $langId  = isset( $argv[2] ) ? (int) $argv[2] : NULL;
-$ecrire  = in_array( '--ecrire', $argv );
+$ecrire  = ecritureDemandee( $argv );
 
 /* Sans argument : on montre les langues du forum et les traductions dispo. */
 if ( !$fichier or !$langId )
@@ -36,7 +36,7 @@ if ( !$fichier or !$langId )
 		printf( "  %s\n", basename( $f, '.xml' ) );
 	}
 
-	printf( "\nExemple : php %s french 2 --ecrire\n", 'applications/heicuploads/tools/import-lang.php' );
+	printf( "\nExemple : php %s french 2 --write\n", 'applications/heicuploads/tools/import-lang.php' );
 	exit( 0 );
 }
 
@@ -67,7 +67,7 @@ catch( Throwable $e )
 }
 
 printf( "%s\n%s → %s\n\n",
-	$ecrire ? "=== ÉCRITURE ===" : "=== SIMULATION (ajoutez --ecrire pour appliquer) ===",
+	$ecrire ? "=== ÉCRITURE ===" : "=== SIMULATION (ajoutez --write pour appliquer) ===",
 	basename( $chemin ),
 	$langue['lang_title'] );
 
