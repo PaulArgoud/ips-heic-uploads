@@ -16,6 +16,12 @@
  * On ne réécrit rien à la main : on appelle les routines du coeur, qui sont
  * additives et rejouables. Aucune ne touche aux pièces jointes.
  *
+ * Ce script vaut pour la mise à jour par COPIE DE FICHIERS. Une mise à jour par
+ * téléversement d'archive, elle, appelle déjà installJsonData() et
+ * installLanguages() même sans dossier setup/ — mais jamais
+ * installDatabaseSchema(). Voir « What the archive does on an existing install »
+ * dans le README.
+ *
  * À lancer depuis la RACINE du forum :
  *     php applications/heicuploads/tools/deploy-sync.php          (simulation)
  *     php applications/heicuploads/tools/deploy-sync.php --write   (applique)

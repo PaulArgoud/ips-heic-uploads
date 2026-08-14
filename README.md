@@ -189,17 +189,34 @@ Invision Community only accepts an **uncompressed `.tar`** whose root holds the
 own are unusable: they are compressed and wrapped in a versioned root folder.
 
 ```bash
-./build-release.sh v1.0.1
+./build-release.sh v1.0.2
 ```
 
 The script builds the archive from the git tag — reproducible, and files that
 git does not track cannot slip in — then checks its structure and refuses to
 produce a non-compliant archive. Attach the result to the GitHub release.
 
-Note that uploading such an archive over an **already installed** application
-goes through the core's upgrade path, which looks for a `setup/` directory this
-application does not have. That path has never been exercised here. To update an
-existing install, copy the files and run `deploy-sync.php`.
+### What the archive does on an existing install
+
+This application has no `setup/` directory, which is often assumed to break the
+upgrade path. It does not. Traced through the core:
+
+- `getUpgradeSteps()` returns an empty array when `setup/` is absent — a missing
+  directory, not an error.
+- The upgrade then falls straight through to its generic stages, which call
+  `installJsonData()` (modules, tasks, settings) and `installLanguages()`.
+
+So an uploaded archive applies everything `deploy-sync.php` applies, with one
+exception: **`installDatabaseSchema()` is never called on an upgrade.** Schema
+changes come only from `setup/upg_<longversion>/queries.json`, read by
+`installDatabaseUpdates()`. The schema has not changed since 1.0.0, so there is
+no gap today — and when one is needed, that directory needs to hold nothing but
+`queries.json`: the core guards the upgrade class with `class_exists()`, so no
+PHP is required for a pure schema change.
+
+This is traced in the source, not executed. `deploy-sync.php` remains the
+recommended route for an existing install, for a reason unrelated to any of the
+above: it shows you a dry run before it writes anything.
 
 ## Languages
 
